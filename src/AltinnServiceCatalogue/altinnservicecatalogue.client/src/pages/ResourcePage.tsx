@@ -574,16 +574,12 @@ export default function ResourcePage() {
                   const pkg = packageInfo[subject.value];
                   return (
                     <div key={subject.value} className="flex items-center gap-2 flex-wrap">
-                      {pkg ? (
-                        <Link
-                          to={`/package/${pkg.id}`}
-                          className="text-sm font-medium text-blue-600 hover:underline min-w-0"
-                        >
-                          {pkg.name}
-                        </Link>
-                      ) : (
-                        <span className="text-sm font-medium min-w-0">{subject.value}</span>
-                      )}
+                      <Link
+                        to={`/package/${encodeURIComponent(subject.value)}`}
+                        className="text-sm font-medium text-blue-600 hover:underline min-w-0"
+                      >
+                        {pkg ? pkg.name : subject.value}
+                      </Link>
                       {subject.actions.map((action) => (
                         <Tag
                           key={action}

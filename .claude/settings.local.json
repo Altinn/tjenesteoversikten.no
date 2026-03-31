@@ -88,7 +88,12 @@
       "Bash(dotnet run:*)",
       "Bash(grep -r AltinnApp /c/repos/altinnservicecatalogue/src/AltinnServiceCatalogue/altinnservicecatalogue.client/src/ --include=*.tsx --include=*.ts)",
       "Bash(grep -r dark c:/repos/altinnservicecatalogue/src/AltinnServiceCatalogue/altinnservicecatalogue.client/node_modules/@digdir/designsystemet-theme/ --include=*.css -l)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://platform.altinn.no/accessmanagement/api/v1/meta/info/accesspackages/urn/starte-drive-endre-avikle-virksomhet\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://platform.altinn.no/accessmanagement/api/v1/meta/info/accesspackages/urn/urn%3Aaltinn%3Aaccesspackage%3Astarte-drive-endre-avikle-virksomhet\")",
+      "Bash(curl -s https://platform.altinn.no/accessmanagement/api/v1/meta/info/accesspackages/search?term=starte)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(f''''{r[object][id]} | {r[object][urn]} | {r[object][name]}''''\\) for r in data[:5]]\")",
+      "Bash(curl -s -w n%{http_code} https://platform.altinn.no/accessmanagement/api/v1/meta/info/roles/48f9e5ec-efd5-4863-baba-9697b8971666)"
     ],
     "additionalDirectories": [
       "\\tmp"

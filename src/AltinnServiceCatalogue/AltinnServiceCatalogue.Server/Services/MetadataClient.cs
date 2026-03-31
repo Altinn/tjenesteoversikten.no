@@ -161,7 +161,9 @@ public class MetadataClient(IHttpClientFactory httpClientFactory, ILogger<Metada
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             return null;
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<RoleDto>(JsonOptions, ct);
+        // Upstream returns an array even for a single role lookup
+        var roles = await response.Content.ReadFromJsonAsync<List<RoleDto>>(JsonOptions, ct);
+        return roles?.FirstOrDefault();
     }
 
     public async Task<List<PackageDto>> GetRolePackagesAsync(string baseUrl, string role, string variant, bool? includeResources, CancellationToken ct)

@@ -18,6 +18,8 @@ interface SearchResult {
   score: number;
 }
 
+const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Extract the short accesspackage value from a URN like "urn:altinn:accesspackage:motorvognavgift" */
 function getPackageUrnValue(urn: string): string {
   const parts = urn.split(':');
@@ -76,11 +78,7 @@ export default function PackagePage() {
     setLoading(true);
     setError(null);
 
-    const lookupPromise: Promise<PackageDto | null> = statePkg
-      ? searchForPackage(env, statePkg.name, packageId)
-      : fetchFromExport(env, packageId);
-
-    lookupPromise
+    fetchPackage(env, packageId, statePkg)
       .then((found) => {
         if (found) {
           setPkg(found);
@@ -293,39 +291,103 @@ export default function PackagePage() {
   );
 }
 
+/**
+ * Fetch a package by either GUID or URN suffix.
+ * 1. If statePkg is passed (navigation from HomePage), search by name to get resources.
+ * 2. If packageId is a GUID, fetch directly via /accesspackages/{id}.
+ * 3. Otherwise treat it as a URN suffix and fetch via /accesspackages/urn/{value}.
+ * 4. Once we have the package, enrich with area/group info from the export if needed.
+ */
+async function fetchPackage(env: string, packageId: string, statePkg: PackageDto | null): Promise<PackageDto | null> {
+  // If we have state from navigation, search by name to get the version with resources
+  if (statePkg) {
+    const withResources = await searchForPackage(env, statePkg.name, statePkg.id);
+    if (withResources) {
+      return enrichWithAreaInfo(env, withResources);
+    }
+  }
+
+  // Direct API lookup
+  let pkg: PackageDto | null = null;
+
+  if (GUID_RE.test(packageId)) {
+    // Lookup by GUID
+    const res = await fetch(`/api/v1/${env}/meta/info/accesspackages/${packageId}`);
+    if (res.ok) {
+      pkg = await res.json();
+    } else if (res.status !== 404) {
+      throw new Error(`Failed to fetch package: ${res.status}`);
+    }
+  }
+
+  if (!pkg) {
+    // Lookup by URN suffix via export data — the upstream /urn/ endpoint is unreliable,
+    // so we search the full export matching the URN suffix against the package URN.
+    pkg = await findPackageByUrnSuffix(env, packageId);
+  }
+
+  if (!pkg) return null;
+
+  // Search by name to get the version with resources included
+  const withResources = await searchForPackage(env, pkg.name, pkg.id);
+  if (withResources) {
+    return enrichWithAreaInfo(env, withResources);
+  }
+
+  return enrichWithAreaInfo(env, pkg);
+}
+
 /** Search for a package by name and match by ID to get the version with resources */
 async function searchForPackage(env: string, name: string, id: string): Promise<PackageDto | null> {
   const res = await fetch(`/api/v1/${env}/meta/info/accesspackages/search?term=${encodeURIComponent(name)}`);
-  if (!res.ok) throw new Error(`Failed to search packages: ${res.status}`);
+  if (!res.ok) return null;
   const results: SearchResult[] = await res.json();
   const match = results.find((r) => r.object.id === id);
   return match?.object ?? null;
 }
 
-/** Fetch export and find a package by ID (fallback for direct URL access) */
-async function fetchFromExport(env: string, id: string): Promise<PackageDto | null> {
+/** Find a package by URN suffix (e.g. "starte-drive-endre-avvikle-virksomhet") from the export data */
+async function findPackageByUrnSuffix(env: string, urnSuffix: string): Promise<PackageDto | null> {
   const res = await fetch(`/api/v1/${env}/meta/info/accesspackages/export`);
-  if (!res.ok) throw new Error(`Failed to fetch packages: ${res.status}`);
+  if (!res.ok) return null;
   const groups: AreaGroupDto[] = await res.json();
 
+  const suffix = urnSuffix.toLowerCase();
   for (const group of groups) {
     for (const area of group.areas ?? []) {
-      const found = (area.packages ?? []).find((p) => p.id === id);
+      const found = (area.packages ?? []).find((p) =>
+        p.urn && getPackageUrnValue(p.urn).toLowerCase() === suffix,
+      );
       if (found) {
-        const withResources = await searchForPackage(env, found.name, id);
-        if (withResources) {
-          withResources.area = {
-            ...withResources.area,
-            ...area,
-            packages: undefined,
-            group: { ...group, areas: undefined },
-          } as PackageDto['area'];
-          return withResources;
-        }
-        found.area = { ...area, packages: undefined, group: { ...group, areas: undefined } };
+        found.area = { ...area, packages: undefined, group: { ...group, areas: undefined } } as PackageDto['area'];
         return found;
       }
     }
   }
   return null;
+}
+
+/** Enrich a package with area/group info from the export data if it's missing */
+async function enrichWithAreaInfo(env: string, pkg: PackageDto): Promise<PackageDto> {
+  if (pkg.area?.group) return pkg;
+
+  try {
+    const res = await fetch(`/api/v1/${env}/meta/info/accesspackages/export`);
+    if (!res.ok) return pkg;
+    const groups: AreaGroupDto[] = await res.json();
+
+    for (const group of groups) {
+      for (const area of group.areas ?? []) {
+        const found = (area.packages ?? []).find((p) => p.id === pkg.id);
+        if (found) {
+          pkg.area = { ...area, packages: undefined, group: { ...group, areas: undefined } } as PackageDto['area'];
+          return pkg;
+        }
+      }
+    }
+  } catch {
+    // Area info is nice-to-have, don't fail
+  }
+
+  return pkg;
 }
