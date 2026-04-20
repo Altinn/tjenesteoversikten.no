@@ -22,7 +22,7 @@ Full-stack web app for browsing/searching public digital services (Altinn ecosys
 
 ## Architecture
 - Backend serves React SPA as static assets with fallback to index.html
-- Vite proxies `/weatherforecast` and `/api` to backend API in dev
+- Vite proxies `/api` to backend API in dev
 - Frontend: single App.tsx with sample service data, multi-criteria filtering
 - Tailwind dark mode support, responsive grid layout
 - Path alias: `@` → `./src` in Vite config
