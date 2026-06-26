@@ -30,7 +30,7 @@ const SEARCH_DISPLAY_LIMIT = 100;
 function toggleArrayItem(arr: string[], item: string): string[] {
   return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
 }
-import type { Org, OrgList, ServiceResource, AreaGroupDto, RoleDto, PackageDto, AuthLevelStatistics, StatsJobStatus, AccessPackageStatistics, AccessPackageStatsJobStatus } from '../types';
+import type { Org, OrgList, ServiceResource, AreaGroupDto, RoleDto, PackageDto, AuthLevelStatistics, StatsJobStatus, AccessPackageStatistics, AccessPackageStatsJobStatus, CaseSensitiveStatistics, CaseSensitiveStatsJobStatus } from '../types';
 import { getText, OrgLogo, packagePath, getPackageUrnValue, fetchPackageGroupsBilingual } from '../helpers';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
@@ -120,6 +120,13 @@ export default function HomePage() {
   const [errorApStats, setErrorApStats] = useState<string | null>(null);
   const [apStatsProgress, setApStatsProgress] = useState<{ progress: number; total: number } | null>(null);
   const [showApWithoutList, setShowApWithoutList] = useState(false);
+
+  // Case-sensitive policy matching state
+  const [csStatsData, setCsStatsData] = useState<CaseSensitiveStatistics | null>(null);
+  const [loadingCsStats, setLoadingCsStats] = useState(false);
+  const [errorCsStats, setErrorCsStats] = useState<string | null>(null);
+  const [csStatsProgress, setCsStatsProgress] = useState<{ progress: number; total: number } | null>(null);
+  const [showCsAffectedList, setShowCsAffectedList] = useState(false);
 
   // Quick search state (hero)
   const [quickSearch, setQuickSearch] = useState('');
@@ -573,6 +580,83 @@ export default function HomePage() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `policies-without-access-packages-${env}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function pollCsStatsJob() {
+    const poll = () => {
+      fetch(`/api/v1/${env}/resource/statistics/casesensitive/status`)
+        .then((res) => res.json() as Promise<CaseSensitiveStatsJobStatus>)
+        .then((job) => {
+          if (job.status === 'done' && job.result) {
+            setCsStatsData(job.result);
+            setLoadingCsStats(false);
+            setCsStatsProgress(null);
+          } else if (job.status === 'error') {
+            setErrorCsStats(job.error ?? 'Unknown error');
+            setLoadingCsStats(false);
+            setCsStatsProgress(null);
+          } else {
+            setCsStatsProgress({ progress: job.progress ?? 0, total: job.total ?? 0 });
+            setTimeout(poll, 2000);
+          }
+        })
+        .catch((err) => {
+          setErrorCsStats(err.message);
+          setLoadingCsStats(false);
+          setCsStatsProgress(null);
+        });
+    };
+    poll();
+  }
+
+  function fetchCaseSensitiveStats(reload = false) {
+    setLoadingCsStats(true);
+    setErrorCsStats(null);
+    setCsStatsData(null);
+    setCsStatsProgress(null);
+    fetch(`/api/v1/${env}/resource/statistics/casesensitive/start${reload ? '?reload=true' : ''}`, { method: 'POST' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed: ${res.status}`);
+        return res.json() as Promise<CaseSensitiveStatsJobStatus>;
+      })
+      .then((job) => {
+        if (job.status === 'done' && job.result) {
+          setCsStatsData(job.result);
+          setLoadingCsStats(false);
+        } else {
+          pollCsStatsJob();
+        }
+      })
+      .catch((err) => {
+        setErrorCsStats(err.message);
+        setLoadingCsStats(false);
+      });
+  }
+
+  function downloadCaseSensitiveCsv() {
+    if (!csStatsData) return;
+    const escape = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['org', 'resourceid', 'name', 'resourceType', 'roleIssue', 'actionIssue', 'accessPackageIssue', 'details'];
+    const rows = csStatsData.affected.map((r) => [
+      r.hasCompetentAuthority?.orgcode ?? '',
+      r.identifier,
+      getText(r.title, lang) || r.identifier,
+      r.resourceType ?? '',
+      r.hasRoleIssue ? 'yes' : '',
+      r.hasActionIssue ? 'yes' : '',
+      r.hasAccessPackageIssue ? 'yes' : '',
+      r.matches.map((m) => `${m.category}=${m.value}`).join('; '),
+    ]);
+    const csv = [header, ...rows].map((cols) => cols.map(escape).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `policies-case-sensitive-matching-${env}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1842,6 +1926,134 @@ export default function HomePage() {
                     </Button>
                     <Button variant="secondary" data-size="sm" onClick={() => fetchAccessPackageStats(true)}>
                       {t('stats.ap.reloadXacml')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Case-sensitive policy matching */}
+            <div className="mt-12 pt-8 border-t border-neutral-300">
+              <Heading level={2} data-size="md" className="mb-2">{t('stats.cs.title')}</Heading>
+              <Paragraph className="mb-6" style={{ color: 'var(--ds-color-neutral-text-subtle)' }}>
+                {t('stats.cs.description')}
+              </Paragraph>
+
+              {!csStatsData && !loadingCsStats && (
+                <div className="flex flex-wrap gap-2">
+                  <Button data-size="md" onClick={() => fetchCaseSensitiveStats()}>
+                    {t('stats.cs.calculate')}
+                  </Button>
+                  <Button variant="secondary" data-size="md" onClick={() => fetchCaseSensitiveStats(true)}>
+                    {t('stats.cs.reloadXacml')}
+                  </Button>
+                </div>
+              )}
+
+              {loadingCsStats && (
+                <div className="flex flex-col items-center gap-4 py-20">
+                  <Spinner aria-label={t('stats.cs.calculating')} data-size="lg" />
+                  <Paragraph>{t('stats.cs.calculating')}</Paragraph>
+                  {csStatsProgress && csStatsProgress.total > 0 && (
+                    <Paragraph data-size="sm">{t('stats.progress').replace('{progress}', String(csStatsProgress.progress)).replace('{total}', String(csStatsProgress.total))}</Paragraph>
+                  )}
+                </div>
+              )}
+
+              {errorCsStats && (
+                <Alert data-color="danger" className="mb-6">
+                  {t('error.loadData')}: {errorCsStats}
+                </Alert>
+              )}
+
+              {csStatsData && !loadingCsStats && (
+                <div className="space-y-6">
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <Card data-color="neutral">
+                      <CardBlock>
+                        <Heading level={3} data-size="2xl" className="text-center">{csStatsData.totalPolicies}</Heading>
+                        <Paragraph data-size="sm" className="text-center">{t('stats.cs.total')}</Paragraph>
+                      </CardBlock>
+                    </Card>
+                    <Card data-color={csStatsData.withIssues > 0 ? 'warning' : 'success'}>
+                      <CardBlock>
+                        <Heading level={3} data-size="2xl" className="text-center">{csStatsData.withIssues}</Heading>
+                        <Paragraph data-size="sm" className="text-center">{t('stats.cs.withIssues')}</Paragraph>
+                      </CardBlock>
+                    </Card>
+                    <Card data-color="neutral">
+                      <CardBlock>
+                        <Heading level={3} data-size="2xl" className="text-center">{csStatsData.roleIssues}</Heading>
+                        <Paragraph data-size="sm" className="text-center">{t('stats.cs.roleIssues')}</Paragraph>
+                      </CardBlock>
+                    </Card>
+                    <Card data-color="neutral">
+                      <CardBlock>
+                        <Heading level={3} data-size="2xl" className="text-center">{csStatsData.actionIssues}</Heading>
+                        <Paragraph data-size="sm" className="text-center">{t('stats.cs.actionIssues')}</Paragraph>
+                      </CardBlock>
+                    </Card>
+                    <Card data-color="neutral">
+                      <CardBlock>
+                        <Heading level={3} data-size="2xl" className="text-center">{csStatsData.accessPackageIssues}</Heading>
+                        <Paragraph data-size="sm" className="text-center">{t('stats.cs.apIssues')}</Paragraph>
+                      </CardBlock>
+                    </Card>
+                    <Card data-color="neutral">
+                      <CardBlock>
+                        <Heading level={3} data-size="2xl" className="text-center">{csStatsData.errorCount}</Heading>
+                        <Paragraph data-size="sm" className="text-center">{t('stats.cs.errors')}</Paragraph>
+                      </CardBlock>
+                    </Card>
+                  </div>
+
+                  {/* Affected list */}
+                  {csStatsData.affected.length > 0 && (
+                    <div>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <Button variant="secondary" data-size="sm" onClick={() => setShowCsAffectedList(!showCsAffectedList)}>
+                          {showCsAffectedList ? t('stats.hideList') : t('stats.showList')}: {t('stats.cs.affected')} ({csStatsData.affected.length})
+                        </Button>
+                        <Button variant="secondary" data-size="sm" onClick={downloadCaseSensitiveCsv}>
+                          {t('stats.cs.downloadCsv')}
+                        </Button>
+                      </div>
+                      {showCsAffectedList && (
+                        <div className="grid gap-2">
+                          {csStatsData.affected.map((r) => (
+                            <Card key={r.identifier} data-color="warning" className="p-0">
+                              <CardBlock>
+                                <div className="flex items-start justify-between gap-4">
+                                  <div>
+                                    <Link to={`/resource/${r.identifier}`} className="font-semibold">
+                                      {getText(r.title, lang) || r.identifier}
+                                    </Link>
+                                    <Paragraph data-size="sm" style={{ color: 'var(--ds-color-neutral-text-subtle)' }}>
+                                      {r.identifier} — {r.hasCompetentAuthority?.orgcode}
+                                    </Paragraph>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1 justify-end">
+                                    {r.hasRoleIssue && <Tag data-size="sm" data-color="danger">{t('stats.cs.roleIssues')}</Tag>}
+                                    {r.hasActionIssue && <Tag data-size="sm" data-color="danger">{t('stats.cs.actionIssues')}</Tag>}
+                                    {r.hasAccessPackageIssue && <Tag data-size="sm" data-color="danger">{t('stats.cs.apIssues')}</Tag>}
+                                  </div>
+                                </div>
+                              </CardBlock>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Recalculate buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" data-size="sm" onClick={() => fetchCaseSensitiveStats()}>
+                      {t('stats.cs.calculate')}
+                    </Button>
+                    <Button variant="secondary" data-size="sm" onClick={() => fetchCaseSensitiveStats(true)}>
+                      {t('stats.cs.reloadXacml')}
                     </Button>
                   </div>
                 </div>

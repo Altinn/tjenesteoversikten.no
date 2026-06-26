@@ -395,6 +395,20 @@ const translations: Record<string, Record<Lang, string>> = {
   'stats.ap.onlyRoles': { nb: 'Kun roller', en: 'Roles only' },
   'stats.ap.downloadCsv': { nb: 'Last ned CSV', en: 'Download CSV' },
   'stats.ap.reloadXacml': { nb: 'Last på nytt fra XACML', en: 'Reload from XACML' },
+  // Case-sensitive policy matching
+  'stats.cs.title': { nb: 'Case-sensitiv policy-matching', en: 'Case-sensitive policy matching' },
+  'stats.cs.description': { nb: 'Finner policyer som matcher rolle, handling eller tilgangspakke case-sensitivt (string-equal) i stedet for case-insensitivt (string-equal-ignore-case). Slik matching kan feile når verdien kommer inn med annen bokstavstørrelse. Ressurs-identitet (org/app) matches alltid case-sensitivt og regnes ikke som feil.', en: 'Finds policies that match role, action or access package case-sensitively (string-equal) instead of case-insensitively (string-equal-ignore-case). Such matching can fail when the value arrives with different casing. Resource identity (org/app) is always matched case-sensitively and is not counted as an issue.' },
+  'stats.cs.calculate': { nb: 'Beregn statistikk for case-sensitivitet', en: 'Calculate case-sensitivity statistics' },
+  'stats.cs.calculating': { nb: 'Henter og analyserer XACML-policyer...', en: 'Fetching and analysing XACML policies...' },
+  'stats.cs.total': { nb: 'Totalt policyer', en: 'Total policies' },
+  'stats.cs.withIssues': { nb: 'Med case-sensitiv matching', en: 'With case-sensitive matching' },
+  'stats.cs.roleIssues': { nb: 'Rolle', en: 'Role' },
+  'stats.cs.actionIssues': { nb: 'Handling', en: 'Action' },
+  'stats.cs.apIssues': { nb: 'Tilgangspakke', en: 'Access package' },
+  'stats.cs.errors': { nb: 'Feil ved henting', en: 'Errors fetching' },
+  'stats.cs.affected': { nb: 'Berørte ressurser/apper', en: 'Affected resources/apps' },
+  'stats.cs.downloadCsv': { nb: 'Last ned CSV', en: 'Download CSV' },
+  'stats.cs.reloadXacml': { nb: 'Last på nytt fra XACML', en: 'Reload from XACML' },
 };
 
 const LangContext = createContext<LangContextValue | null>(null);

@@ -158,7 +158,14 @@
       "PowerShell(dotnet build \"src/AltinnServiceCatalogue/AltinnServiceCatalogue.McpServer/AltinnServiceCatalogue.McpServer.csproj\" -nologo -clp:ErrorsOnly 2>&1)",
       "PowerShell(dotnet build \"src/AltinnServiceCatalogue/AltinnServiceCatalogue.McpServer/AltinnServiceCatalogue.McpServer.csproj\" -nologo -clp:ErrorsOnly --output \"$env:TEMP\\\\sorm-build-check\" 2>&1 | Select-Object -Last 15)",
       "PowerShell(dotnet build \"src/AltinnServiceCatalogue/AltinnServiceCatalogue.McpServer/AltinnServiceCatalogue.McpServer.csproj\" -nologo -clp:ErrorsOnly --output \"$env:TEMP\\\\sorm-build-check2\" 2>&1 | Select-Object -Last 20)",
-      "mcp__altinn__get_access_package_resources"
+      "mcp__altinn__get_access_package_resources",
+      "Bash(cd /c/repos/altinnservicecatalogue; grep -rn \"ABAC\" src/AltinnServiceCatalogue/AltinnServiceCatalogue.Server/*.csproj; echo \"---cache---\"; find ~/.nuget/packages -maxdepth 1 -iname \"*abac*\" 2>/dev/null)",
+      "Read(//c/Users/RUNLAR/.nuget/packages/**)",
+      "Read(//c/Users/RUNLAR/.nuget/packages/altinn.authorization.abac/0.1.1/lib/**)",
+      "Bash(find ~/.nuget/packages/altinn.authorization.abac -iname \"*.xml\")",
+      "PowerShell(dotnet build \"src/AltinnServiceCatalogue/AltinnServiceCatalogue.Server/AltinnServiceCatalogue.Server.csproj\" -nologo -clp:ErrorsOnly --output \"$env:TEMP\\\\srv-build-check\" 2>&1 | Select-Object -Last 25)",
+      "PowerShell(cd \"src/AltinnServiceCatalogue/altinnservicecatalogue.client\"; Test-Path tsconfig.app.json; \\(Get-Content package.json | ConvertFrom-Json\\).scripts.build)",
+      "PowerShell(npx --prefix \"C:\\\\repos\\\\altinnservicecatalogue\\\\src\\\\AltinnServiceCatalogue\\\\altinnservicecatalogue.client\" tsc -b \"C:\\\\repos\\\\altinnservicecatalogue\\\\src\\\\AltinnServiceCatalogue\\\\altinnservicecatalogue.client\" 2>&1 | Select-Object -First 40; \"exit=$LASTEXITCODE\")"
     ],
     "additionalDirectories": [
       "\\tmp"

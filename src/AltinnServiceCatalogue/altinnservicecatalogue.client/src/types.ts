@@ -261,3 +261,40 @@ export interface AccessPackageStatsJobStatus {
   result?: AccessPackageStatistics;
   error?: string;
 }
+
+export interface CaseSensitiveMatch {
+  category: 'role' | 'action' | 'accesspackage' | string;
+  attributeId: string;
+  value: string;
+  matchFunction: string;
+}
+
+export interface PolicyCaseSensitiveEntry {
+  identifier: string;
+  title: Record<string, string>;
+  hasCompetentAuthority?: CompetentAuthority;
+  resourceType: string | null;
+  hasRoleIssue: boolean;
+  hasActionIssue: boolean;
+  hasAccessPackageIssue: boolean;
+  matches: CaseSensitiveMatch[];
+  error: boolean;
+}
+
+export interface CaseSensitiveStatistics {
+  totalPolicies: number;
+  withIssues: number;
+  roleIssues: number;
+  actionIssues: number;
+  accessPackageIssues: number;
+  affected: PolicyCaseSensitiveEntry[];
+  errorCount: number;
+}
+
+export interface CaseSensitiveStatsJobStatus {
+  status: 'running' | 'done' | 'error' | 'not_started';
+  progress?: number;
+  total?: number;
+  result?: CaseSensitiveStatistics;
+  error?: string;
+}
