@@ -40,13 +40,13 @@ export default function AboutPage() {
             {t('about.sourceCode')}
           </p>
           <a
-            href="https://github.com/thetecharch/altinnservicecatalogue/"
+            href="https://github.com/Altinn/tjenesteoversikten.no/"
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'var(--ds-color-accent-text-subtle)' }}
             className="hover:underline break-all"
           >
-            https://github.com/thetecharch/altinnservicecatalogue/
+            https://github.com/Altinn/tjenesteoversikten.no/
           </a>
         </div>
       </div>

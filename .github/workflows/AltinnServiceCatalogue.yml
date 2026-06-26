@@ -1,4 +1,15 @@
-name: Build and deploy .NET Core application to Web App AltinnServiceCatalogue
+# Deploys the app to an Azure Web App via OIDC (federated credentials — no publish profile / secret).
+#
+# Required GitHub Actions *Variables* (Settings → Secrets and variables → Actions → Variables):
+#   AZURE_WEBAPP_NAME        Name of the Azure Web App to deploy to
+#   AZURE_CLIENT_ID          App registration (client) id with a federated credential for this repo
+#   AZURE_TENANT_ID          Azure AD tenant id
+#   AZURE_SUBSCRIPTION_ID    Subscription id of the Web App
+#
+# The federated credential on the app registration must have subject
+#   repo:Altinn/tjenesteoversikten.no:ref:refs/heads/main
+# (and/or the environment/pull_request subjects you use). Update this when the repo owner/name changes.
+name: Build and deploy .NET Core application to Azure Web App
 on:
   push:
     branches:
@@ -7,11 +18,11 @@ permissions:
   id-token: write
   contents: read
 env:
-  AZURE_WEBAPP_NAME: AltinnServiceCatalogue
-  AZURE_WEBAPP_PACKAGE_PATH: AltinnServiceCatalogue.Server\publish
+  AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+  AZURE_WEBAPP_PACKAGE_PATH: src/AltinnServiceCatalogue/AltinnServiceCatalogue.Server/publish
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 10.0.x
-  WORKING_DIRECTORY: AltinnServiceCatalogue.Server
+  WORKING_DIRECTORY: src/AltinnServiceCatalogue/AltinnServiceCatalogue.Server
 jobs:
   build:
     runs-on: windows-latest
@@ -46,9 +57,9 @@ jobs:
     - name: Azure Login
       uses: azure/login@v2
       with:
-        client-id: ${{ vars.AltinnServiceCatalogue_CLIENT_ID_CE00 }}
-        tenant-id: ${{ vars.AltinnServiceCatalogue_TENANT_ID_CE00 }}
-        subscription-id: ${{ vars.AltinnServiceCatalogue_SUBSCRIPTION_ID_CE00 }}
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: Deploy to Azure WebApp
       uses: azure/webapps-deploy@v2
       with:
