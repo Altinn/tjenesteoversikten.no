@@ -155,6 +155,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'roles.noServices': { nb: 'Ingen tjenester knyttet til denne rollen.', en: 'No services associated with this role.' },
   'roles.packages': { nb: 'Tilgangspakker rollen gir', en: 'Access packages granted by this role' },
   'roles.noPackages': { nb: 'Denne rollen gir ingen tilgangspakker.', en: 'This role does not grant any access packages.' },
+  'roles.packagesByVariant': { nb: 'Denne rollen gir tilgangspakker kun for enkelte organisasjonsformer. Velg organisasjonsform for å se pakkene:', en: 'This role only grants access packages for certain organization types. Select an organization type to see the packages:' },
 
   // Keywords
   'home.tabs.keywords': { nb: 'Nøkkelord', en: 'Keywords' },

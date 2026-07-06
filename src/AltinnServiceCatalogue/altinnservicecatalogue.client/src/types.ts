@@ -146,6 +146,13 @@ export interface AreaGroupDto {
 
 // Roles
 
+/** Packages a role grants for one specific entity variant (organization form), e.g. NUF/ESEK/BRL. */
+export interface RoleVariantPackagesDto {
+  variantName: string;
+  variantDescription?: string;
+  packages: PackageDto[];
+}
+
 export interface RoleDto {
   id: string;
   name: string;

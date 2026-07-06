@@ -1,5 +1,6 @@
 using Altinn.Authorization.Api.Contracts.AccessManagement;
 using AltinnServiceCatalogue.Server.Configuration;
+using AltinnServiceCatalogue.Server.Models;
 using AltinnServiceCatalogue.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -367,6 +368,28 @@ public class MetadataController(
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "Upstream request failed for GetRolePackagesById({Id}/{Variant}) in {Environment}", id, variant, environment);
+            return StatusCode(StatusCodes.Status502BadGateway, "Upstream service unavailable");
+        }
+    }
+
+    [HttpGet("info/roles/{id:guid}/packages/byvariant")]
+    [ProducesResponseType<List<RoleVariantPackagesDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRolePackagesByVariant(
+        [FromRoute] string environment,
+        [FromRoute] Guid id,
+        CancellationToken ct)
+    {
+        if (!TryResolveBaseUrl(environment, out var baseUrl))
+            return BadRequest($"Unknown environment: {environment}");
+
+        try
+        {
+            var result = await client.GetRolePackagesByVariantAsync(baseUrl, id, ct);
+            return Ok(result);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Upstream request failed for GetRolePackagesByVariant({Id}) in {Environment}", id, environment);
             return StatusCode(StatusCodes.Status502BadGateway, "Upstream service unavailable");
         }
     }

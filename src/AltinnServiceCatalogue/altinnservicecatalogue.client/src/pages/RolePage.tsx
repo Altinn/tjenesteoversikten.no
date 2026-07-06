@@ -8,8 +8,9 @@ import {
   Tag,
   Card,
   CardBlock,
+  Tabs,
 } from '@digdir/designsystemet-react';
-import type { RoleDto, SubjectResourcesResponse, PolicyRule, PackageDto } from '../types';
+import type { RoleDto, SubjectResourcesResponse, PolicyRule, PackageDto, RoleVariantPackagesDto } from '../types';
 import { packagePath } from '../helpers';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
@@ -84,6 +85,54 @@ const ACTION_COLORS: Record<string, 'info' | 'success' | 'warning' | 'danger' | 
 
 const BATCH_SIZE = 20;
 
+/** Grid of access package cards, shared between the default list and the per-variant tabs */
+function PackageGrid({ packages }: { packages: PackageDto[] }) {
+  const { t } = useLang();
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {packages.map((pkg) => (
+        <Link
+          key={pkg.id}
+          to={packagePath(pkg)}
+          state={{ pkg }}
+          className="no-underline"
+        >
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+            <CardBlock className="p-5 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                {pkg.area?.iconUrl && (
+                  <img src={pkg.area.iconUrl} alt="" className="w-5 h-5 flex-shrink-0" />
+                )}
+                <Heading level={4} data-size="2xs">
+                  {pkg.name}
+                </Heading>
+              </div>
+              {pkg.description && (
+                <Paragraph data-size="sm" className="text-gray-600 line-clamp-3">
+                  {pkg.description}
+                </Paragraph>
+              )}
+              <div className="flex flex-wrap gap-1 mt-1">
+                {pkg.area && (
+                  <Tag data-size="sm" data-color="neutral">
+                    {pkg.area.name}
+                  </Tag>
+                )}
+                <Tag
+                  data-size="sm"
+                  data-color={pkg.isDelegable ? 'success' : 'neutral'}
+                >
+                  {pkg.isDelegable ? t('packages.delegable') : t('packages.notDelegable')}
+                </Tag>
+              </div>
+            </CardBlock>
+          </Card>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export default function RolePage() {
   const { t } = useLang();
   const { env } = useEnv();
@@ -104,6 +153,11 @@ export default function RolePage() {
 
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(false);
+
+  // Fallback when the default variant grants no packages: some role->package relations only
+  // apply to specific enterprise types (e.g. Forretningsfører only grants packages for NUF/ESEK/BRL)
+  const [variantPackages, setVariantPackages] = useState<RoleVariantPackagesDto[]>([]);
+  const [activeVariant, setActiveVariant] = useState('');
 
   // Fetch role data if not passed via router state
   useEffect(() => {
@@ -129,26 +183,45 @@ export default function RolePage() {
       });
   }, [roleId, env]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch access packages granted by this role (variant=person covers all current upstream roles)
+  // Fetch access packages granted by this role. Falls back to probing entity variants when the
+  // default variant grants nothing (variant-gated relations, e.g. Forretningsfører).
   useEffect(() => {
     if (!role) return;
     setLoadingPackages(true);
+    setPackages([]);
+    setVariantPackages([]);
 
-    fetch(`/api/v1/${env}/meta/info/roles/${role.id}/packages?variant=person`)
-      .then((res) => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/v1/${env}/meta/info/roles/${role.id}/packages?variant=person`);
         if (!res.ok) throw new Error(`Failed to fetch role packages: ${res.status}`);
-        return res.json() as Promise<PackageDto[]>;
-      })
-      .then((data) => {
+        const data: PackageDto[] = await res.json();
         const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name));
+        if (cancelled) return;
         setPackages(sorted);
-      })
-      .catch(() => {
-        setPackages([]);
-      })
-      .finally(() => {
-        setLoadingPackages(false);
-      });
+
+        if (sorted.length === 0) {
+          const vRes = await fetch(`/api/v1/${env}/meta/info/roles/${role.id}/packages/byvariant`);
+          if (vRes.ok) {
+            const variants: RoleVariantPackagesDto[] = await vRes.json();
+            if (cancelled) return;
+            setVariantPackages(variants);
+            setActiveVariant(variants[0]?.variantName ?? '');
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setPackages([]);
+          setVariantPackages([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingPackages(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [role, env]);
 
   // Fetch resources for this role via bysubjects
@@ -340,7 +413,8 @@ export default function RolePage() {
       {/* Access packages granted by this role */}
       <section className="mb-10">
         <Heading level={3} data-size="sm" className="mb-4">
-          {t('roles.packages')} ({packages.length})
+          {t('roles.packages')}
+          {variantPackages.length === 0 ? ` (${packages.length})` : ''}
         </Heading>
 
         {loadingPackages && (
@@ -349,54 +423,42 @@ export default function RolePage() {
           </div>
         )}
 
-        {!loadingPackages && packages.length === 0 && (
+        {!loadingPackages && packages.length === 0 && variantPackages.length === 0 && (
           <Paragraph className="text-center py-10 text-gray-500">
             {t('roles.noPackages')}
           </Paragraph>
         )}
 
-        {!loadingPackages && packages.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {packages.map((pkg) => (
-              <Link
-                key={pkg.id}
-                to={packagePath(pkg)}
-                state={{ pkg }}
-                className="no-underline"
-              >
-                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                  <CardBlock className="p-5 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      {pkg.area?.iconUrl && (
-                        <img src={pkg.area.iconUrl} alt="" className="w-5 h-5 flex-shrink-0" />
-                      )}
-                      <Heading level={4} data-size="2xs">
-                        {pkg.name}
-                      </Heading>
-                    </div>
-                    {pkg.description && (
-                      <Paragraph data-size="sm" className="text-gray-600 line-clamp-3">
-                        {pkg.description}
+        {!loadingPackages && packages.length > 0 && <PackageGrid packages={packages} />}
+
+        {/* Variant-gated packages: one tab per enterprise type with relations */}
+        {!loadingPackages && packages.length === 0 && variantPackages.length > 0 && (
+          <>
+            <Paragraph data-size="sm" className="text-gray-600 mb-4">
+              {t('roles.packagesByVariant')}
+            </Paragraph>
+            <Tabs value={activeVariant} onChange={(val) => setActiveVariant(val)}>
+              <Tabs.List>
+                {variantPackages.map((v) => (
+                  <Tabs.Tab key={v.variantName} value={v.variantName}>
+                    {v.variantName} ({v.packages.length})
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+              {variantPackages.map((v) => (
+                <Tabs.Panel key={v.variantName} value={v.variantName}>
+                  <div className="pt-4">
+                    {v.variantDescription && (
+                      <Paragraph data-size="sm" className="text-gray-500 mb-4">
+                        {v.variantDescription}
                       </Paragraph>
                     )}
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {pkg.area && (
-                        <Tag data-size="sm" data-color="neutral">
-                          {pkg.area.name}
-                        </Tag>
-                      )}
-                      <Tag
-                        data-size="sm"
-                        data-color={pkg.isDelegable ? 'success' : 'neutral'}
-                      >
-                        {pkg.isDelegable ? t('packages.delegable') : t('packages.notDelegable')}
-                      </Tag>
-                    </div>
-                  </CardBlock>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                    <PackageGrid packages={v.packages} />
+                  </div>
+                </Tabs.Panel>
+              ))}
+            </Tabs>
+          </>
         )}
       </section>
 

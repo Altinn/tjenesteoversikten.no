@@ -1,4 +1,5 @@
 using Altinn.Authorization.Api.Contracts.AccessManagement;
+using AltinnServiceCatalogue.Server.Models;
 
 namespace AltinnServiceCatalogue.Server.Services;
 
@@ -25,6 +26,14 @@ public interface IMetadataClient
     Task<List<PackageDto>> GetRolePackagesAsync(string baseUrl, string role, string variant, bool? includeResources, CancellationToken ct = default);
     Task<List<ResourceDto>> GetRoleResourcesAsync(string baseUrl, string role, string variant, bool? includePackageResources, CancellationToken ct = default);
     Task<List<PackageDto>> GetRolePackagesByIdAsync(string baseUrl, Guid id, string variant, bool? includeResources, CancellationToken ct = default);
+
+    /// <summary>
+    /// Probes every organization entity variant for packages the role grants, returning only variants
+    /// with at least one package. Used as a fallback when the default variant yields no packages
+    /// (some role->package relations only apply to specific enterprise types, e.g. Forretningsfører
+    /// grants packages only for NUF/ESEK/BRL). The result is cached in memory.
+    /// </summary>
+    Task<List<RoleVariantPackagesDto>> GetRolePackagesByVariantAsync(string baseUrl, Guid id, CancellationToken ct = default);
     Task<List<ResourceDto>> GetRoleResourcesByIdAsync(string baseUrl, Guid id, string variant, bool? includePackageResources, CancellationToken ct = default);
 
     /// <summary>

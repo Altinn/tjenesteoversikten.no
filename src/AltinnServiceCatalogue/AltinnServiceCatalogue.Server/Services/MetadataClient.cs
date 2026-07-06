@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Altinn.Authorization.Api.Contracts.AccessManagement;
+using AltinnServiceCatalogue.Server.Models;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -247,6 +248,56 @@ public class MetadataClient(
         var response = await client.GetAsync(url, ct);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<List<ResourceDto>>(JsonOptions, ct) ?? [];
+    }
+
+    public async Task<List<RoleVariantPackagesDto>> GetRolePackagesByVariantAsync(string baseUrl, Guid id, CancellationToken ct = default)
+    {
+        var cacheKey = $"role-packages-by-variant-{baseUrl}-{id}";
+        if (cache.TryGetValue(cacheKey, out List<RoleVariantPackagesDto>? cached) && cached is not null)
+            return cached;
+
+        logger.LogInformation("Probing role {RoleId} packages across entity variants for {BaseUrl}", id, baseUrl);
+
+        // The upstream API has no endpoint exposing which entity variants a role->package
+        // relation is gated to, so probe every organization variant and keep the ones that hit.
+        var variants = await GetOrganizationSubTypesAsync(baseUrl, ct);
+
+        // Limit upstream concurrency so we don't hammer the metadata service.
+        using var gate = new SemaphoreSlim(10);
+        var tasks = variants.Select(async variant =>
+        {
+            await gate.WaitAsync(ct);
+            try
+            {
+                var pkgs = await GetRolePackagesByIdAsync(baseUrl, id, variant.Name, includeResources: false, ct);
+                return (variant, pkgs);
+            }
+            catch (HttpRequestException ex)
+            {
+                logger.LogWarning(ex, "Failed to fetch packages for role {RoleId} with variant {Variant}; skipping", id, variant.Name);
+                return (variant, pkgs: new List<PackageDto>());
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        var byVariant = results
+            .Where(r => r.pkgs.Count > 0)
+            .OrderBy(r => r.variant.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(r => new RoleVariantPackagesDto
+            {
+                VariantName = r.variant.Name,
+                VariantDescription = r.variant.Description,
+                Packages = [.. r.pkgs.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)],
+            })
+            .ToList();
+
+        cache.Set(cacheKey, byVariant, CacheDuration);
+        logger.LogInformation("Role {RoleId} grants packages for {Variants} of {Probed} entity variants", id, byVariant.Count, variants.Count);
+        return byVariant;
     }
 
     public async Task<List<RoleDto>> GetPackageRolesAsync(string baseUrl, Guid packageId, CancellationToken ct)

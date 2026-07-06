@@ -2,6 +2,6 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ActiveDebugProfile>https</ActiveDebugProfile>
-    <NameOfLastUsedPublishProfile>C:\repos\altinnservicecatalogue\src\AltinnServiceCatalogue\AltinnServiceCatalogue.Server\Properties\PublishProfiles\tjenestekatalogen - Zip Deploy.pubxml</NameOfLastUsedPublishProfile>
+    <NameOfLastUsedPublishProfile>C:\repos\tjenesteoversikten.no\src\AltinnServiceCatalogue\AltinnServiceCatalogue.Server\Properties\PublishProfiles\tjenestekatalogen - Zip Deploy1.pubxml</NameOfLastUsedPublishProfile>
   </PropertyGroup>
 </Project>

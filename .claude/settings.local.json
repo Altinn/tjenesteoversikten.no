@@ -165,7 +165,11 @@
       "Bash(find ~/.nuget/packages/altinn.authorization.abac -iname \"*.xml\")",
       "PowerShell(dotnet build \"src/AltinnServiceCatalogue/AltinnServiceCatalogue.Server/AltinnServiceCatalogue.Server.csproj\" -nologo -clp:ErrorsOnly --output \"$env:TEMP\\\\srv-build-check\" 2>&1 | Select-Object -Last 25)",
       "PowerShell(cd \"src/AltinnServiceCatalogue/altinnservicecatalogue.client\"; Test-Path tsconfig.app.json; \\(Get-Content package.json | ConvertFrom-Json\\).scripts.build)",
-      "PowerShell(npx --prefix \"C:\\\\repos\\\\altinnservicecatalogue\\\\src\\\\AltinnServiceCatalogue\\\\altinnservicecatalogue.client\" tsc -b \"C:\\\\repos\\\\altinnservicecatalogue\\\\src\\\\AltinnServiceCatalogue\\\\altinnservicecatalogue.client\" 2>&1 | Select-Object -First 40; \"exit=$LASTEXITCODE\")"
+      "PowerShell(npx --prefix \"C:\\\\repos\\\\altinnservicecatalogue\\\\src\\\\AltinnServiceCatalogue\\\\altinnservicecatalogue.client\" tsc -b \"C:\\\\repos\\\\altinnservicecatalogue\\\\src\\\\AltinnServiceCatalogue\\\\altinnservicecatalogue.client\" 2>&1 | Select-Object -First 40; \"exit=$LASTEXITCODE\")",
+      "Bash(ls \"c:/repos/altinn-authorization-tmp\" 2>/dev/null && echo \"---EXISTS---\" || echo \"---NOT FOUND---\")",
+      "Read(//c/repos/altinn-authorization-tmp/**)",
+      "PowerShell(dotnet build \"c:\\\\repos\\\\tjenesteoversikten.no\\\\src\\\\AltinnServiceCatalogue\\\\AltinnServiceCatalogue.Server\\\\AltinnServiceCatalogue.Server.csproj\" --nologo -v q 2>&1)",
+      "PowerShell($roles = Invoke-RestMethod \"https://platform.altinn.no/accessmanagement/api/v1/meta/info/roles\"; $ffor = $roles | Where-Object { $_.name -match 'forretningsf' -or $_.code -match 'forretningsf' }; $ffor | Select-Object id, name, code | Format-List)"
     ],
     "additionalDirectories": [
       "\\tmp"
