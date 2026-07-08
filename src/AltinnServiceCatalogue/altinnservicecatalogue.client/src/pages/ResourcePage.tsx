@@ -99,6 +99,8 @@ interface SubjectActions {
   type: string;
   value: string;
   actions: string[];
+  /** Subject came from /policy/subjects only — the rules API did not include it, so actions are unknown */
+  actionsUnknown?: boolean;
 }
 
 /** Group policy rules by subject and collect actions per subject */
@@ -172,9 +174,10 @@ export default function ResourcePage() {
       });
   }, [id, env]);
 
-  // Fetch policy rules for this resource.
-  // Altinn 2 migrated apps (_a1-/_a2-) make upstream /policy/rules error out, so we fall back
-  // to /policy/subjects — that returns the role/package list without per-rule actions.
+  // Fetch policy rules for this resource, and always merge in /policy/subjects.
+  // The upstream /policy/rules flattener drops subjects for some policy shapes (e.g. rules with
+  // several subject AnyOf groups, or Altinn 2 migrated _a1-/_a2- apps where it errors out), so
+  // subjects that only appear in /policy/subjects are shown too, with actions marked as unknown.
   useEffect(() => {
     if (!id) return;
     setLoadingRules(true);
@@ -183,21 +186,21 @@ export default function ResourcePage() {
     const subjectsUrl = `/api/v1/${env}/resource/${encodeURIComponent(id)}/policy/subjects`;
 
     (async () => {
+      const [rulesRes, subjectsRes] = await Promise.allSettled([fetch(rulesUrl), fetch(subjectsUrl)]);
+
       let subjects: SubjectActions[] = [];
 
-      const rulesRes = await fetch(rulesUrl);
-      if (rulesRes.ok) {
-        const rules = (await rulesRes.json()) as PolicyRule[];
+      if (rulesRes.status === 'fulfilled' && rulesRes.value.ok) {
+        const rules = (await rulesRes.value.json()) as PolicyRule[];
         subjects = groupRulesBySubject(rules);
       }
 
-      if (subjects.length === 0) {
-        const subjectsRes = await fetch(subjectsUrl);
-        if (subjectsRes.ok) {
-          const body = (await subjectsRes.json()) as { data?: { type: string; value: string }[] };
-          subjects = (body.data ?? [])
-            .filter((s) => s.value)
-            .map((s) => ({ type: s.type, value: s.value, actions: [] }));
+      if (subjectsRes.status === 'fulfilled' && subjectsRes.value.ok) {
+        const body = (await subjectsRes.value.json()) as { data?: { type: string; value: string }[] };
+        const known = new Set(subjects.map((s) => `${s.type}::${s.value}`.toLowerCase()));
+        for (const s of body.data ?? []) {
+          if (!s.value || known.has(`${s.type}::${s.value}`.toLowerCase())) continue;
+          subjects.push({ type: s.type, value: s.value, actions: [], actionsUnknown: true });
         }
       }
 
@@ -606,6 +609,11 @@ export default function ResourcePage() {
                           {action}
                         </Tag>
                       ))}
+                      {subject.actionsUnknown && (
+                        <Tag data-size="sm" data-color="neutral">
+                          {t('resource.actionsUnknown')}
+                        </Tag>
+                      )}
                     </div>
                   );
                 })}
@@ -643,6 +651,11 @@ export default function ResourcePage() {
                           {action}
                         </Tag>
                       ))}
+                      {subject.actionsUnknown && (
+                        <Tag data-size="sm" data-color="neutral">
+                          {t('resource.actionsUnknown')}
+                        </Tag>
+                      )}
                     </div>
                   );
                 })}
