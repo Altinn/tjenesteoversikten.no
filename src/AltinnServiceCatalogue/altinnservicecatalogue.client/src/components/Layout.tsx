@@ -1,117 +1,60 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
-import { useTheme, type ColorScheme } from '../theme';
+import { useTheme } from '../theme';
 
-function FlagNorway() {
-  return (
-    <svg viewBox="0 0 22 16" width="22" height="16" aria-hidden="true">
-      <rect width="22" height="16" fill="#EF2B2D" />
-      <rect x="6" width="4" height="16" fill="#FFFFFF" />
-      <rect y="6" width="22" height="4" fill="#FFFFFF" />
-      <rect x="7" width="2" height="16" fill="#002868" />
-      <rect y="7" width="22" height="2" fill="#002868" />
-    </svg>
-  );
-}
+const HOME_PATHS = new Set(['/', '/owners', '/types', '/packages', '/roles', '/keywords', '/statistics', '/search']);
 
-function FlagUK() {
+function Brand() {
   return (
-    <svg viewBox="0 0 60 30" width="22" height="16" aria-hidden="true">
-      <rect width="60" height="30" fill="#012169" />
-      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6" />
-      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" strokeWidth="4" />
-      <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10" />
-      <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6" />
-    </svg>
+    <Link to="/" className="brand" aria-label="tjenesteoversikten.no">
+      <span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5 6.5 12 13 4.5" /></svg></span>
+      <span><b>tjeneste</b>oversikten<span className="brand-domain">.no</span></span>
+    </Link>
   );
 }
 
 export default function Layout() {
-  const { lang, setLang, t } = useLang();
+  const { lang, setLang } = useLang();
   const { env, setEnv } = useEnv();
   const { colorScheme, setColorScheme } = useTheme();
+  const location = useLocation();
+  const isHome = HOME_PATHS.has(location.pathname);
 
-  const themeOptions: { value: ColorScheme; icon: string }[] = [
-    { value: 'light', icon: '☀️' },
-    { value: 'dark', icon: '🌙' },
-    { value: 'auto', icon: '💻' },
-  ];
+  useEffect(() => window.scrollTo({ top: 0, behavior: 'instant' }), [location.pathname]);
+  const isDark = colorScheme === 'dark' || (colorScheme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--ds-color-neutral-background-tinted)' }}>
-      <header style={{ backgroundColor: 'var(--ds-color-neutral-base-default)', color: 'var(--ds-color-neutral-base-contrast-default)' }}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="no-underline flex items-center gap-3 text-white">
-            <img src="/logo_houses.png" alt="" className="h-9" />
-            <span className="text-lg font-semibold">tjenesteoversikten.no</span>
-          </Link>
-          <div className="flex items-center gap-5">
-            <nav className="flex gap-4 text-sm">
-              <Link className="text-white/80 hover:text-white hover:underline" to="/">
-                {t('nav.home')}
-              </Link>
-              <Link className="text-white/80 hover:text-white hover:underline" to="/about">
-                {t('nav.about')}
-              </Link>
+    <div className="site-shell">
+      <header className="site-header">
+        <div className="header-inner">
+          <Brand />
+          <div className="header-actions">
+            <nav className="main-nav" aria-label={lang === 'nb' ? 'Hovedmeny' : 'Main navigation'}>
+              <NavLink to="/">{lang === 'nb' ? 'Hjem' : 'Home'}</NavLink>
+              <NavLink to="/wizard">{lang === 'nb' ? 'Tilgangsveiviser' : 'Access wizard'}</NavLink>
+              <NavLink to="/about">{lang === 'nb' ? 'Om tjenesten' : 'About'}</NavLink>
             </nav>
-            <div className="flex gap-1 items-center">
-              <button
-                onClick={() => setEnv('tt02')}
-                className={`text-xs font-medium px-2 py-1 rounded ${env === 'tt02' ? 'bg-white/20 text-white ring-1 ring-white/50' : 'text-white/60 hover:text-white'}`}
-                aria-label="TT02"
-                title="Test environment (TT02)"
-              >
-                TT02
-              </button>
-              <button
-                onClick={() => setEnv('prod')}
-                className={`text-xs font-medium px-2 py-1 rounded ${env === 'prod' ? 'bg-white/20 text-white ring-1 ring-white/50' : 'text-white/60 hover:text-white'}`}
-                aria-label="Prod"
-                title="Production environment"
-              >
-                PROD
-              </button>
+            <div className="segmented" aria-label="Miljø">
+              <button className={env === 'tt02' ? 'active' : ''} onClick={() => setEnv('tt02')}>TT02</button>
+              <button className={env === 'prod' ? 'active' : ''} onClick={() => setEnv('prod')}>PROD</button>
             </div>
-            <div className="flex gap-1 items-center">
-              <button
-                onClick={() => setLang('nb')}
-                className={`leading-none p-1 rounded flex items-center ${lang === 'nb' ? 'ring-1 ring-white/50' : 'opacity-60 hover:opacity-100'}`}
-                aria-label="Norsk"
-                title="Norsk"
-              >
-                <FlagNorway />
-              </button>
-              <button
-                onClick={() => setLang('en')}
-                className={`leading-none p-1 rounded flex items-center ${lang === 'en' ? 'ring-1 ring-white/50' : 'opacity-60 hover:opacity-100'}`}
-                aria-label="English"
-                title="English"
-              >
-                <FlagUK />
-              </button>
+            <div className="language-switch" aria-label="Language">
+              <button className={lang === 'nb' ? 'active' : ''} onClick={() => setLang('nb')}>NO</button>
+              <button className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>EN</button>
             </div>
-            <div className="flex gap-1 items-center">
-              {themeOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setColorScheme(opt.value)}
-                  className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${colorScheme === opt.value ? 'bg-white/20 text-white ring-1 ring-white/50' : 'text-white/60 hover:text-white'}`}
-                  aria-label={t(`theme.${opt.value}`)}
-                  title={t(`theme.${opt.value}`)}
-                >
-                  <span aria-hidden="true">{opt.icon}</span>
-                  <span className="hidden sm:inline">{t(`theme.${opt.value}`)}</span>
-                </button>
-              ))}
-            </div>
+            <button className="theme-toggle" onClick={() => setColorScheme(isDark ? 'light' : 'dark')} aria-label={isDark ? 'Bruk lyst tema' : 'Bruk mørkt tema'} title={colorScheme === 'auto' ? 'Tema følger systemet' : undefined}><span aria-hidden="true">{isDark ? '☀' : '☾'}</span></button>
           </div>
         </div>
       </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <Outlet />
-      </main>
+      <main className={isHome ? 'home-main' : 'page-main'}><Outlet /></main>
+      <footer className="site-footer">
+        <div className="footer-inner">
+          <span>{lang === 'nb' ? 'Laget av teamet bak Altinn Autorisasjon — uoffisielt hobbyprosjekt' : 'Built by the team behind Altinn Authorization — unofficial hobby project'}</span>
+          <span>{lang === 'nb' ? 'Data fra Altinn ressursregister' : 'Data from the Altinn resource registry'} · {env === 'prod' ? 'platform.altinn.no' : 'platform.tt02.altinn.no'}</span>
+        </div>
+      </footer>
     </div>
   );
 }
