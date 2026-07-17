@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
-import {
-  Heading,
-  Paragraph,
-  Spinner,
-  Alert,
-  Tag,
-  Card,
-  CardBlock,
-} from '@digdir/designsystemet-react';
+import { Spinner, Alert } from '@digdir/designsystemet-react';
 import type { PackageDto, MetaResource, AreaGroupDto, PolicyRule, RoleDto } from '../types';
 import { getPackageUrnValue } from '../helpers';
 import { useLang } from '../lang';
@@ -44,15 +36,8 @@ async function fetchActionsForPackage(
   }
 }
 
-const ACTION_COLORS: Record<string, 'info' | 'success' | 'warning' | 'danger' | 'neutral'> = {
-  read: 'info',
-  write: 'success',
-  sign: 'warning',
-  confirmationrequired: 'neutral',
-};
-
 export default function PackagePage() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const { env } = useEnv();
   const { packageId } = useParams<{ packageId: string }>();
   const location = useLocation();
@@ -156,211 +141,200 @@ export default function PackagePage() {
     );
   }
 
+  const packageName = lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name;
+  const packageDescription =
+    lang === 'en' && pkg.descriptionEn ? pkg.descriptionEn : pkg.description;
+  const areaName = pkg.area?.name;
+  const groupName = pkg.area?.group?.name;
+  const areaInitials = (areaName ?? packageName)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase();
+
   return (
-    <>
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link to="/" className="hover:underline">
-          {t('nav.home')}
-        </Link>
+    <div className="package-detail-page">
+      <nav className="breadcrumbs" aria-label={lang === 'nb' ? 'Brødsmuler' : 'Breadcrumbs'}>
+        <Link to="/">{t('nav.home')}</Link>
         <span>/</span>
-        <Link to="/packages" className="hover:underline">
-          {t('home.tabs.accessPackages')}
-        </Link>
-        {pkg.area?.group && (
+        <Link to="/packages">{t('home.tabs.accessPackages')}</Link>
+        {groupName && (
           <>
             <span>/</span>
-            <span>{pkg.area.group.name}</span>
-          </>
-        )}
-        {pkg.area && (
-          <>
-            <span>/</span>
-            <span>{pkg.area.name}</span>
+            <span>{groupName}</span>
           </>
         )}
         <span>/</span>
-        <span className="text-gray-900 truncate max-w-xs">{pkg.name}</span>
+        <span className="package-breadcrumb-current">{packageName}</span>
       </nav>
 
-      {/* Package header */}
-      <section className="mb-8">
-        <div className="flex items-center gap-3 mb-3">
-          {pkg.area?.iconUrl && (
-            <img src={pkg.area.iconUrl} alt="" className="w-8 h-8" />
-          )}
-          <Heading level={2} data-size="lg">
-            {pkg.name}
-          </Heading>
+      <header className="package-detail-hero">
+        <div className="package-detail-heading">
+          <span className="package-detail-icon" aria-hidden="true">
+            {pkg.area?.iconUrl ? <img src={pkg.area.iconUrl} alt="" /> : areaInitials}
+          </span>
+          <div>
+            <span className="eyebrow">
+              {lang === 'nb' ? 'Tilgangspakke' : 'Access package'}
+            </span>
+            <h1>{packageName}</h1>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2 mb-4">
-          <Tag
-            data-size="sm"
-            data-color={pkg.isDelegable ? 'success' : 'neutral'}
-          >
+
+        {packageDescription && <p className="package-detail-description">{packageDescription}</p>}
+
+        <div className="package-status-list">
+          <span className="package-status" data-tone={pkg.isDelegable ? 'positive' : 'neutral'}>
+            <span aria-hidden="true">{pkg.isDelegable ? '✓' : '–'}</span>
             {pkg.isDelegable ? t('packages.delegable') : t('packages.notDelegable')}
-          </Tag>
-          {pkg.area?.group && (
-            <Tag data-size="sm" data-color="neutral">{pkg.area.group.type}</Tag>
+          </span>
+          <span className="package-status" data-tone={pkg.isAssignable ? 'positive' : 'neutral'}>
+            <span aria-hidden="true">{pkg.isAssignable ? '✓' : '–'}</span>
+            {pkg.isAssignable
+              ? (lang === 'nb' ? 'Kan tildeles' : 'Assignable')
+              : (lang === 'nb' ? 'Kan ikke tildeles' : 'Not assignable')}
+          </span>
+          {pkg.area?.group?.type && (
+            <span className="package-status" data-tone="neutral">
+              {pkg.area.group.type}
+            </span>
           )}
         </div>
-        {pkg.description && (
-          <Paragraph data-size="md" className="mb-4">
-            {pkg.description}
-          </Paragraph>
-        )}
+      </header>
+
+      <section
+        className="package-facts"
+        aria-label={lang === 'nb' ? 'Om tilgangspakken' : 'About the access package'}
+      >
+        <dl className="package-fact-grid">
+          <div>
+            <dt>{t('packages.area')}</dt>
+            <dd>{areaName ?? '–'}</dd>
+          </div>
+          <div>
+            <dt>{t('packages.group')}</dt>
+            <dd>{groupName ?? '–'}</dd>
+          </div>
+          <div>
+            <dt>{t('packages.delegable')}</dt>
+            <dd>{pkg.isDelegable ? t('yes') : t('no')}</dd>
+          </div>
+          <div>
+            <dt>{lang === 'nb' ? 'Kan tildeles' : 'Assignable'}</dt>
+            <dd>{pkg.isAssignable ? t('yes') : t('no')}</dd>
+          </div>
+        </dl>
+        <div className="package-urn">
+          <span>{t('packages.urn')}</span>
+          <code>{pkg.urn}</code>
+        </div>
       </section>
 
-      {/* Package details */}
-      <Card className="mb-8">
-        <CardBlock className="p-5">
-          <dl>
-            {pkg.area && (
-              <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 border-b border-gray-100">
-                <dt className="text-sm font-medium text-gray-500">{t('packages.area')}</dt>
-                <dd className="mt-1 text-sm sm:col-span-2 sm:mt-0">{pkg.area.name}</dd>
-              </div>
-            )}
-            {pkg.area?.group && (
-              <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 border-b border-gray-100">
-                <dt className="text-sm font-medium text-gray-500">{t('packages.group')}</dt>
-                <dd className="mt-1 text-sm sm:col-span-2 sm:mt-0">{pkg.area.group.name}</dd>
-              </div>
-            )}
-            <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 border-b border-gray-100">
-              <dt className="text-sm font-medium text-gray-500">{t('packages.urn')}</dt>
-              <dd className="mt-1 text-sm sm:col-span-2 sm:mt-0 font-mono text-xs">{pkg.urn}</dd>
+      <div className="package-detail-layout">
+        <main className="package-resource-section">
+          <header className="package-section-header">
+            <div>
+              <h2>{t('packages.services')}</h2>
+              <p>
+                {lang === 'nb'
+                  ? 'Tjenestene og rettighetene som inngår i tilgangspakken.'
+                  : 'The services and permissions included in this access package.'}
+              </p>
             </div>
-            <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 border-b border-gray-100">
-              <dt className="text-sm font-medium text-gray-500">{t('packages.delegable')}</dt>
-              <dd className="mt-1 text-sm sm:col-span-2 sm:mt-0">{pkg.isDelegable ? t('yes') : t('no')}</dd>
-            </div>
-          </dl>
-        </CardBlock>
-      </Card>
+            <span className="package-count">{resources.length}</span>
+          </header>
 
-      {/* Roles that grant this package */}
-      <section className="mb-10">
-        <Heading level={3} data-size="sm" className="mb-4">
-          {t('packages.roles')} ({roles.length})
-        </Heading>
-
-        {loadingRoles && (
-          <div className="flex justify-center py-10">
-            <Spinner aria-label={t('loading')} data-size="md" />
-          </div>
-        )}
-
-        {!loadingRoles && roles.length === 0 && (
-          <Paragraph className="text-center py-10 text-gray-500">
-            {t('packages.noRoles')}
-          </Paragraph>
-        )}
-
-        {!loadingRoles && roles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {roles.map((role) => (
-              <Link
-                key={role.id}
-                to={`/role/${encodeURIComponent(role.id)}`}
-                state={{ role }}
-                className="no-underline"
-              >
-                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                  <CardBlock className="p-5 flex flex-col gap-2">
-                    <Heading level={4} data-size="2xs">
-                      {role.name}
-                    </Heading>
-                    {role.description && (
-                      <Paragraph data-size="sm" className="text-gray-600 line-clamp-3">
-                        {role.description}
-                      </Paragraph>
-                    )}
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {role.isKeyRole && (
-                        <Tag data-size="sm" data-color="info">
-                          {t('roles.keyRole')}
-                        </Tag>
-                      )}
-                      <Tag data-size="sm" data-color="neutral">
-                        {role.code}
-                      </Tag>
-                      {role.provider && (
-                        <Tag data-size="sm" data-color="neutral">
-                          {role.provider.name}
-                        </Tag>
+          {resources.length === 0 ? (
+            <div className="detail-empty">{t('packages.noServices')}</div>
+          ) : (
+            <div className="package-resource-list">
+              {resources.map((resource) => {
+                const actions = actionMap[resource.refId] ?? [];
+                return (
+                  <Link
+                    key={resource.id}
+                    to={`/resource/${encodeURIComponent(resource.refId)}`}
+                    className="package-resource-row"
+                  >
+                    <div className="package-resource-copy">
+                      <strong>{resource.name}</strong>
+                      {resource.description && <p>{resource.description}</p>}
+                      <div className="package-resource-meta">
+                        {resource.provider?.name && <span>{resource.provider.name}</span>}
+                        {resource.type?.name && <span>{resource.type.name}</span>}
+                      </div>
+                      {actions.length > 0 && (
+                        <div className="package-action-list" aria-label={lang === 'nb' ? 'Rettigheter' : 'Permissions'}>
+                          {actions.map((action) => (
+                            <span
+                              className="package-action"
+                              data-action={action.toLowerCase()}
+                              key={action}
+                            >
+                              {action}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
-                  </CardBlock>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+                    <span className="package-row-chevron" aria-hidden="true">›</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </main>
 
-      {/* Services in this package */}
-      <section>
-        <Heading level={3} data-size="sm" className="mb-4">
-          {t('packages.services')} ({resources.length})
-        </Heading>
+        <aside className="package-role-panel">
+          <header className="package-section-header">
+            <div>
+              <h2>{t('packages.roles')}</h2>
+              <p>
+                {lang === 'nb'
+                  ? 'Roller som automatisk gir denne pakken.'
+                  : 'Roles that automatically grant this package.'}
+              </p>
+            </div>
+            {!loadingRoles && <span className="package-count">{roles.length}</span>}
+          </header>
 
-        {resources.length === 0 ? (
-          <Paragraph className="text-center py-16 text-gray-500">
-            {t('packages.noServices')}
-          </Paragraph>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {resources.map((resource) => {
-              const actions = actionMap[resource.refId] ?? [];
-              return (
+          {loadingRoles && (
+            <div className="package-role-loading">
+              <Spinner aria-label={t('loading')} data-size="md" />
+            </div>
+          )}
+
+          {!loadingRoles && roles.length === 0 && (
+            <div className="package-role-empty">{t('packages.noRoles')}</div>
+          )}
+
+          {!loadingRoles && roles.length > 0 && (
+            <div className="package-role-list">
+              {roles.map((role) => (
                 <Link
-                  key={resource.id}
-                  to={`/resource/${encodeURIComponent(resource.refId)}`}
-                  className="no-underline"
+                  key={role.id}
+                  to={`/role/${encodeURIComponent(role.id)}`}
+                  state={{ role }}
                 >
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                    <CardBlock className="p-5 flex flex-col gap-2">
-                      <Heading level={4} data-size="2xs">
-                        {resource.name}
-                      </Heading>
-                      {resource.description && (
-                        <Paragraph data-size="sm" className="text-gray-600 line-clamp-3">
-                          {resource.description}
-                        </Paragraph>
-                      )}
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {actions.map((action) => (
-                          <Tag
-                            key={action}
-                            data-size="sm"
-                            data-color={ACTION_COLORS[action] ?? 'neutral'}
-                          >
-                            {action}
-                          </Tag>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {resource.provider && (
-                          <Tag data-size="sm" data-color="neutral">
-                            {resource.provider.name}
-                          </Tag>
-                        )}
-                        {resource.type && (
-                          <Tag data-size="sm" variant="outline">
-                            {resource.type.name}
-                          </Tag>
-                        )}
-                      </div>
-                    </CardBlock>
-                  </Card>
+                  <div className="package-role-copy">
+                    <strong>{role.name}</strong>
+                    {role.description && <p>{role.description}</p>}
+                    <span className="package-role-meta">
+                      <code>{role.code}</code>
+                      {role.provider?.name && <span>{role.provider.name}</span>}
+                      {role.isKeyRole && <span>{t('roles.keyRole')}</span>}
+                    </span>
+                  </div>
+                  <span className="package-row-chevron" aria-hidden="true">›</span>
                 </Link>
-              );
-            })}
-          </div>
-        )}
-      </section>
-    </>
+              ))}
+            </div>
+          )}
+        </aside>
+      </div>
+    </div>
   );
 }
 
