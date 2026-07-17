@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import type { AreaGroupDto, Org, OrgList, RoleDto, ServiceResource } from '../types';
+import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, RoleDto, ServiceResource } from '../types';
 import { fetchPackageGroupsBilingual, getText, packagePath } from '../helpers';
 import { useEnv } from '../env';
 import { useLang } from '../lang';
@@ -39,6 +39,7 @@ export default function HomePage() {
   const [heroQuery, setHeroQuery] = useState('');
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedPackageArea, setSelectedPackageArea] = useState<string | null>(null);
 
   const copy = lang === 'nb' ? {
     title: 'Hele det digitale tjeneste-Norge. Ett sted.',
@@ -76,6 +77,11 @@ export default function HomePage() {
   const ownerCounts = useMemo(() => resources.reduce<Record<string, number>>((acc, r) => { const code = r.hasCompetentAuthority?.orgcode?.toLowerCase(); if (code) acc[code] = (acc[code] ?? 0) + 1; return acc; }, {}), [resources]);
   const typeStats = useMemo(() => { const counts: Record<string, number> = {}; resources.forEach((r) => { const key = typeKey(r.resourceType); counts[key] = (counts[key] ?? 0) + 1; }); return Object.entries(counts).sort((a, b) => b[1] - a[1]); }, [resources]);
   const q = filterQuery.trim().toLowerCase();
+  const packageAreas = useMemo(() => groups.flatMap((group) => (group.areas ?? []).map((area) => ({ area, group }))), [groups]);
+  const selectedArea = packageAreas.find(({ area }) => area.id === selectedPackageArea) ?? null;
+  const matchingPackages = useMemo(() => packageAreas.flatMap(({ area, group }) => (area.packages ?? [])
+    .filter((pkg) => !q || `${pkg.name} ${pkg.nameEn ?? ''} ${pkg.description}`.toLowerCase().includes(q))
+    .map((pkg) => ({ pkg, area, group }))), [packageAreas, q]);
   const owners = useMemo(() => Object.entries(orgs).map(([code, org]) => ({ code, org })).filter(({ code, org }) => !q || code.toLowerCase().includes(q) || getText(org.name, lang).toLowerCase().includes(q)).sort((a, b) => getText(a.org.name, lang).localeCompare(getText(b.org.name, lang))), [orgs, q, lang]);
   const heroResults = useMemo(() => { const hq = heroQuery.trim().toLowerCase(); if (hq.length < 2) return []; return resources.filter((r) => `${getText(r.title, lang)} ${getText(r.description, lang)} ${r.identifier} ${getText(r.hasCompetentAuthority?.name, lang)}`.toLowerCase().includes(hq)).slice(0, 6); }, [heroQuery, resources, lang]);
   const searchResults = useMemo(() => resources.filter((r) => (!q || `${getText(r.title, lang)} ${getText(r.description, lang)} ${r.identifier}`.toLowerCase().includes(q)) && (!selectedTypes.length || selectedTypes.includes(typeKey(r.resourceType)))), [resources, q, selectedTypes, lang]);
@@ -98,7 +104,20 @@ export default function HomePage() {
         {error && <div className="notice">{copy.loadError} ({error}).</div>}
         {activeTab === 'owners' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.owners} /><div className="owner-grid">{owners.map(({ code, org }) => <Link className="owner-card" to={`/org/${code}`} key={code}><OwnerLogo org={org} code={code} lang={lang} /><strong>{getText(org.name, lang)}</strong><span>{format(ownerCounts[code.toLowerCase()] ?? 0)} {copy.services}</span></Link>)}</div></>}
         {activeTab === 'types' && <><Distribution stats={typeStats} /><div className="type-grid">{typeStats.map(([type, count]) => <Link to={`/type/${encodeURIComponent(type === 'Other' ? 'Default' : type)}`} className="type-card" key={type}><div><i style={{ background: TYPE_COLORS[type] }} /><strong>{type}</strong></div><b>{format(count)}</b><p>{lang === 'nb' ? `Registrerte tjenester av typen ${type}.` : `Registered services of type ${type}.`}</p></Link>)}</div></>}
-        {activeTab === 'packages' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.packages} /><div className="package-groups">{groups.map((g) => { const areas = (g.areas ?? []).map((area) => ({ ...area, packages: (area.packages ?? []).filter((p) => !q || `${p.name} ${p.nameEn ?? ''} ${p.description}`.toLowerCase().includes(q)) })).filter((a) => a.packages.length); if (!areas.length) return null; return <section key={g.id}><h2>{g.name}</h2><div className="area-grid">{areas.map((a) => <article className="area-card" key={a.id}><div className="area-title"><span className="initial-tile">{initials(a.name)}</span><div><strong>{a.name}</strong><small>{a.packages.length} {copy.packages}</small></div></div><div className="package-chips">{a.packages.map((p) => <Link to={packagePath(p)} state={{ pkg: p }} key={p.id}>{lang === 'en' && p.nameEn ? p.nameEn : p.name}</Link>)}</div></article>)}</div></section>; })}</div></>}
+        {activeTab === 'packages' && <>
+          <Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.packages} />
+          {q ? (
+            <PackageLinks items={matchingPackages} lang={lang} heading={`${format(matchingPackages.length)} ${copy.results}`} />
+          ) : selectedArea ? (
+            <div className="package-browser">
+              <button className="package-browser-back" onClick={() => setSelectedPackageArea(null)}>← {lang === 'nb' ? 'Alle områder' : 'All areas'}</button>
+              <div className="package-browser-header"><span className="initial-tile">{initials(selectedArea.area.name)}</span><div><h2>{selectedArea.area.name}</h2><p>{selectedArea.group.name} · {selectedArea.area.packages?.length ?? 0} {copy.packages}</p></div></div>
+              <PackageLinks items={(selectedArea.area.packages ?? []).map((pkg) => ({ pkg, area: selectedArea.area, group: selectedArea.group }))} lang={lang} />
+            </div>
+          ) : (
+            <div className="package-groups">{groups.map((group) => <section key={group.id}><h2>{group.name}</h2><div className="area-grid">{(group.areas ?? []).map((area) => <button className="package-area-card" onClick={() => setSelectedPackageArea(area.id)} key={area.id}><span className="initial-tile">{initials(area.name)}</span><div><strong>{area.name}</strong><small>{area.packages?.length ?? 0} {copy.packages}</small></div><span className="chevron">›</span></button>)}</div></section>)}</div>
+          )}
+        </>}
         {activeTab === 'roles' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.roles} /><RoleGroups roles={roles.filter((r) => !q || `${r.name} ${r.code} ${r.description}`.toLowerCase().includes(q))} /></>}
         {activeTab === 'keywords' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.keywords} /><div className="keyword-cloud">{keywords.filter((word) => !q || word.toLowerCase().includes(q)).map((word) => <Link to={`/keyword/${encodeURIComponent(word)}`} key={word}>{word}</Link>)}</div></>}
         {activeTab === 'statistics' && <Statistics resources={resources} typeStats={typeStats} lang={lang} format={format} distribution={copy.distribution} />}
@@ -111,6 +130,9 @@ export default function HomePage() {
 
 function Filter({ value, setValue, placeholder, wide = false }: { value: string; setValue: (value: string) => void; placeholder: string; wide?: boolean }) { return <label className={`filter-input${wide ? ' wide' : ''}`}><SearchIcon /><input value={value} onChange={(e) => setValue(e.target.value)} placeholder={placeholder} aria-label={placeholder} /></label>; }
 function Distribution({ stats }: { stats: [string, number][] }) { return <div className="distribution" aria-hidden="true">{stats.map(([type, count]) => <span key={type} style={{ flex: count, background: TYPE_COLORS[type] }} />)}</div>; }
+function PackageLinks({ items, lang, heading }: { items: { pkg: PackageDto; area: AreaDto; group: AreaGroupDto }[]; lang: string; heading?: string }) {
+  return <div className="package-links-wrap">{heading && <div className="results-count">{heading}</div>}<div className="package-link-grid">{items.map(({ pkg, area }) => <Link className="package-link-card" to={packagePath(pkg)} state={{ pkg }} key={pkg.id}><div><strong>{lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name}</strong><small>{area.name}</small></div><span className="chevron">›</span></Link>)}</div></div>;
+}
 function RoleGroups({ roles }: { roles: RoleDto[] }) { const groups = useMemo(() => { const map = new Map<string, RoleDto[]>(); roles.forEach((r) => { const key = r.provider?.name ?? 'Altinn'; map.set(key, [...(map.get(key) ?? []), r]); }); return [...map.entries()]; }, [roles]); return <div className="role-groups">{groups.map(([provider, items]) => <section key={provider}><h2>{provider}</h2><div className="role-list">{items.map((r) => <Link to={`/role/${r.id}`} key={r.id}><strong>{r.name}</strong><span>{r.description}</span><code>{r.code}</code></Link>)}</div></section>)}</div>; }
 function Statistics({ resources, typeStats, lang, format, distribution }: { resources: ServiceResource[]; typeStats: [string, number][]; lang: string; format: (n: number) => string; distribution: string }) {
   const delegable = resources.filter((r) => r.delegable).length, visible = resources.filter((r) => r.visible).length, active = resources.filter((r) => r.status?.toLowerCase() === 'active').length;
