@@ -22,7 +22,9 @@ export default function Layout() {
   const location = useLocation();
   const isHome = HOME_PATHS.has(location.pathname);
 
-  useEffect(() => window.scrollTo({ top: 0, behavior: 'instant' }), [location.pathname]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [location.pathname]);
   const isDark = colorScheme === 'dark' || (colorScheme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
