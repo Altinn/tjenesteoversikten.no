@@ -90,12 +90,16 @@ export default function HomePage() {
 
   return <div className="home-page fade-up">
     <section className="hero section-inner">
-      <h1>{copy.title}</h1><p>{copy.intro}</p>
-      <div className="hero-search-wrap">
-        <div className="hero-search-row"><label className="hero-search"><SearchIcon /><input value={heroQuery} onChange={(e) => setHeroQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitHero()} placeholder={copy.placeholder} aria-label={copy.placeholder} /></label><button className="primary-button" onClick={submitHero}>{copy.search}</button></div>
-        {heroQuery.trim().length >= 2 && <div className="search-dropdown">{heroResults.map((r) => <Link to={`/resource/${encodeURIComponent(r.identifier)}`} key={r.identifier}><span className={`type-chip type-${typeKey(r.resourceType)}`}>{r.resourceType}</span><strong>{getText(r.title, lang)}</strong><small>{getText(r.hasCompetentAuthority?.name, lang)}</small></Link>)}{!heroResults.length && <div className="empty-row">{copy.noResults}</div>}</div>}
+      <div className="hero-image-panel">
+        <div className="hero-copy">
+          <h1>{copy.title}</h1><p>{copy.intro}</p>
+          <div className="hero-search-wrap">
+            <div className="hero-search-row"><label className="hero-search"><SearchIcon /><input value={heroQuery} onChange={(e) => setHeroQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitHero()} placeholder={copy.placeholder} aria-label={copy.placeholder} /></label><button className="primary-button" onClick={submitHero}>{copy.search}</button></div>
+            {heroQuery.trim().length >= 2 && <div className="search-dropdown">{heroResults.map((r) => <Link to={`/resource/${encodeURIComponent(r.identifier)}`} key={r.identifier}><span className={`type-chip type-${typeKey(r.resourceType)}`}>{r.resourceType}</span><strong>{getText(r.title, lang)}</strong><small>{getText(r.hasCompetentAuthority?.name, lang)}</small></Link>)}{!heroResults.length && <div className="empty-row">{copy.noResults}</div>}</div>}
+          </div>
+        </div>
+        <div className="hero-stats">{[resources.length, Object.keys(orgs).length, packageCount, roles.length, keywords.length].map((value, i) => <div className="stat-card" key={copy.stats[i]}><strong>{loading ? '—' : format(value)}</strong><span>{copy.stats[i]}</span></div>)}</div>
       </div>
-      <div className="hero-stats">{[resources.length, Object.keys(orgs).length, packageCount, roles.length, keywords.length].map((value, i) => <div className="stat-card" key={copy.stats[i]}><strong>{loading ? '—' : format(value)}</strong><span>{copy.stats[i]}</span></div>)}</div>
     </section>
 
     <section className="catalogue-section">
