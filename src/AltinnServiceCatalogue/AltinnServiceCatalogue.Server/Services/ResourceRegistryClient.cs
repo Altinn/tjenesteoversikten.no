@@ -3,13 +3,18 @@ using System.Text.Json;
 using Altinn.Authorization.Api.Contracts.ResourceRegistry;
 using Altinn.ResourceRegistry.Core.Models;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace AltinnServiceCatalogue.Server.Services;
 
-public class ResourceRegistryClient(IHttpClientFactory httpClientFactory, ILogger<ResourceRegistryClient> logger) : IResourceRegistryClient
+public class ResourceRegistryClient(
+    IHttpClientFactory httpClientFactory,
+    IMemoryCache cache,
+    ILogger<ResourceRegistryClient> logger) : IResourceRegistryClient
 {
     private const string BasePath = "/resourceregistry/api/v1/resource";
     private const string BasePathV2 = "/resourceregistry/api/v2/resource";
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(30);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -81,12 +86,21 @@ public class ResourceRegistryClient(IHttpClientFactory httpClientFactory, ILogge
 
     public async Task<OrgList?> GetOrgListAsync(string baseUrl, CancellationToken ct)
     {
-        var client = CreateClient();
-        var url = $"{baseUrl}{BasePath}/orgs";
+        var cacheKey = $"resource-orgs-{baseUrl}";
+        return await cache.GetOrCreateCoalescedAsync(
+            cacheKey,
+            CacheDuration,
+            async cancellationToken =>
+            {
+                var client = CreateClient();
+                var url = $"{baseUrl}{BasePath}/orgs";
+                logger.LogInformation("Fetching and caching organization list from {Url}", url);
 
-        var response = await client.GetAsync(url, ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<OrgList>(JsonOptions, ct);
+                var response = await client.GetAsync(url, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<OrgList>(JsonOptions, cancellationToken);
+            },
+            ct);
     }
 
     public async Task<Stream> GetResourcesBySubjectsAsync(string baseUrl, string[] subjectUrns, CancellationToken ct)

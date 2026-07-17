@@ -51,17 +51,29 @@ public class MetadataClient(
 
     public async Task<List<AreaGroupDto>> ExportPackagesAsync(string baseUrl, string? language, CancellationToken ct)
     {
-        var client = CreateClient();
-        var url = $"{baseUrl}{BasePath}/info/accesspackages/export";
-        logger.LogInformation("Fetching package export from {Url} (language: {Language})", url, language ?? "default");
+        var languageKey = string.IsNullOrWhiteSpace(language)
+            ? "default"
+            : language.Trim().ToLowerInvariant();
+        var cacheKey = $"metadata-package-export-{baseUrl}-{languageKey}";
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        if (!string.IsNullOrEmpty(language))
-            request.Headers.Add("Accept-Language", language);
+        return await cache.GetOrCreateCoalescedAsync<List<AreaGroupDto>>(
+            cacheKey,
+            CacheDuration,
+            async cancellationToken =>
+            {
+                var client = CreateClient();
+                var url = $"{baseUrl}{BasePath}/info/accesspackages/export";
+                logger.LogInformation("Fetching and caching package export from {Url} (language: {Language})", url, languageKey);
 
-        var response = await client.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<AreaGroupDto>>(JsonOptions, ct) ?? [];
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                if (languageKey != "default")
+                    request.Headers.Add("Accept-Language", languageKey);
+
+                var response = await client.SendAsync(request, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<List<AreaGroupDto>>(JsonOptions, cancellationToken) ?? [];
+            },
+            ct) ?? [];
     }
 
     public async Task<List<AreaGroupDto>> GetGroupsAsync(string baseUrl, CancellationToken ct)
@@ -157,13 +169,21 @@ public class MetadataClient(
 
     public async Task<List<RoleDto>> GetRolesAsync(string baseUrl, CancellationToken ct)
     {
-        var client = CreateClient();
-        var url = $"{baseUrl}{BasePath}/info/roles";
-        logger.LogInformation("Fetching roles from {Url}", url);
+        var cacheKey = $"metadata-roles-{baseUrl}";
+        return await cache.GetOrCreateCoalescedAsync<List<RoleDto>>(
+            cacheKey,
+            CacheDuration,
+            async cancellationToken =>
+            {
+                var client = CreateClient();
+                var url = $"{baseUrl}{BasePath}/info/roles";
+                logger.LogInformation("Fetching and caching roles from {Url}", url);
 
-        var response = await client.GetAsync(url, ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<RoleDto>>(JsonOptions, ct) ?? [];
+                var response = await client.GetAsync(url, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<List<RoleDto>>(JsonOptions, cancellationToken) ?? [];
+            },
+            ct) ?? [];
     }
 
     public async Task<RoleDto?> GetRoleAsync(string baseUrl, Guid id, CancellationToken ct)
