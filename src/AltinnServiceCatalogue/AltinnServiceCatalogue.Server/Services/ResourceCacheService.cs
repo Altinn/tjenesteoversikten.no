@@ -22,35 +22,36 @@ public class ResourceCacheService(
     public async Task<List<ServiceResource>> GetResourceListAsync(string baseUrl, bool? includeApps = null, bool? includeAltinn2 = null, CancellationToken ct = default)
     {
         var cacheKey = $"resource-list-{baseUrl}-{includeApps}-{includeAltinn2}";
+        return await cache.GetOrCreateCoalescedAsync<List<ServiceResource>>(
+            cacheKey,
+            CacheDuration,
+            async cancellationToken =>
+            {
+                var client = httpClientFactory.CreateClient("ResourceRegistry");
+                var url = $"{baseUrl}{BasePath}/resourcelist";
 
-        if (cache.TryGetValue(cacheKey, out List<ServiceResource>? cached) && cached is not null)
-            return cached;
+                var queryParams = new List<string> { "includeMigratedApps=true" };
+                if (includeApps.HasValue)
+                    queryParams.Add($"includeApps={includeApps.Value.ToString().ToLower()}");
+                if (includeAltinn2.HasValue)
+                    queryParams.Add($"includeAltinn2={includeAltinn2.Value.ToString().ToLower()}");
+                url += "?" + string.Join("&", queryParams);
 
-        var client = httpClientFactory.CreateClient("ResourceRegistry");
-        var url = $"{baseUrl}{BasePath}/resourcelist";
+                logger.LogInformation("Fetching and caching resource list from {Url}", url);
 
-        var queryParams = new List<string> { "includeMigratedApps=true" };
-        if (includeApps.HasValue)
-            queryParams.Add($"includeApps={includeApps.Value.ToString().ToLower()}");
-        if (includeAltinn2.HasValue)
-            queryParams.Add($"includeAltinn2={includeAltinn2.Value.ToString().ToLower()}");
-        url += "?" + string.Join("&", queryParams);
+                var response = await client.GetAsync(url, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                var resources = await response.Content.ReadFromJsonAsync<List<ServiceResource>>(JsonOptions, cancellationToken) ?? [];
 
-        logger.LogInformation("Fetching and caching resource list from {Url}", url);
+                var dict = resources
+                    .Where(r => !string.IsNullOrEmpty(r.Identifier))
+                    .DistinctBy(r => r.Identifier!, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(r => r.Identifier!, StringComparer.OrdinalIgnoreCase);
+                cache.Set($"resource-dict-{baseUrl}-{includeApps}-{includeAltinn2}", dict, CacheDuration);
 
-        var response = await client.GetAsync(url, ct);
-        response.EnsureSuccessStatusCode();
-        var resources = await response.Content.ReadFromJsonAsync<List<ServiceResource>>(JsonOptions, ct) ?? [];
-
-        cache.Set(cacheKey, resources, CacheDuration);
-
-        var dict = resources
-            .Where(r => !string.IsNullOrEmpty(r.Identifier))
-            .DistinctBy(r => r.Identifier!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(r => r.Identifier!, StringComparer.OrdinalIgnoreCase);
-        cache.Set($"resource-dict-{baseUrl}-{includeApps}-{includeAltinn2}", dict, CacheDuration);
-
-        return resources;
+                return resources;
+            },
+            ct) ?? [];
     }
 
     public async Task<ServiceResource?> GetResourceByIdAsync(string baseUrl, string id, CancellationToken ct)
@@ -66,9 +67,9 @@ public class ResourceCacheService(
         return dict is not null && dict.TryGetValue(id, out var resource) ? resource : null;
     }
 
-    public async Task<List<string>> GetKeywordsAsync(string baseUrl, CancellationToken ct)
+    public async Task<List<string>> GetKeywordsAsync(string baseUrl, bool? includeApps, bool? includeAltinn2, CancellationToken ct)
     {
-        var resources = await GetResourceListAsync(baseUrl, ct: ct);
+        var resources = await GetResourceListAsync(baseUrl, includeApps, includeAltinn2, ct);
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var keywords = new List<string>();

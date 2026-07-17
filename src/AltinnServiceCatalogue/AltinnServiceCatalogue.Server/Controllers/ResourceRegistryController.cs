@@ -46,6 +46,11 @@ public class ResourceRegistryController(
             logger.LogError(ex, "Upstream request failed for GetResourceList in {Environment}", environment);
             return StatusCode(StatusCodes.Status502BadGateway, "Upstream service unavailable");
         }
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogError(ex, "Timed out while fetching resource list in {Environment}", environment);
+            return StatusCode(StatusCodes.Status504GatewayTimeout, "Upstream service timed out");
+        }
     }
 
     [HttpGet("resourcelist/summary")]
@@ -85,6 +90,11 @@ public class ResourceRegistryController(
         {
             logger.LogError(ex, "Upstream request failed for GetResourceListSummary in {Environment}", environment);
             return StatusCode(StatusCodes.Status502BadGateway, "Upstream service unavailable");
+        }
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogError(ex, "Timed out while fetching resource list summary in {Environment}", environment);
+            return StatusCode(StatusCodes.Status504GatewayTimeout, "Upstream service timed out");
         }
     }
 
@@ -354,6 +364,8 @@ public class ResourceRegistryController(
     [ProducesResponseType<List<string>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetKeywords(
         [FromRoute] string environment,
+        [FromQuery] bool? includeApps,
+        [FromQuery] bool? includeAltinn2,
         CancellationToken ct)
     {
         if (!TryResolveBaseUrl(environment, out var baseUrl))
@@ -361,13 +373,18 @@ public class ResourceRegistryController(
 
         try
         {
-            var result = await cacheService.GetKeywordsAsync(baseUrl, ct);
+            var result = await cacheService.GetKeywordsAsync(baseUrl, includeApps, includeAltinn2, ct);
             return Ok(result);
         }
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "Failed to fetch keywords in {Environment}", environment);
             return StatusCode(StatusCodes.Status502BadGateway, "Upstream service unavailable");
+        }
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogError(ex, "Timed out while fetching keywords in {Environment}", environment);
+            return StatusCode(StatusCodes.Status504GatewayTimeout, "Upstream service timed out");
         }
     }
 

@@ -11,6 +11,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 const TAB_PATHS: Record<string, string> = { '/': 'owners', '/owners': 'owners', '/types': 'types', '/packages': 'packages', '/roles': 'roles', '/keywords': 'keywords', '/statistics': 'statistics', '/search': 'search' };
 const TAB_ROUTES: Record<string, string> = { owners: '/owners', types: '/types', packages: '/packages', roles: '/roles', keywords: '/keywords', statistics: '/statistics', search: '/search' };
+type Dataset = 'orgs' | 'resources' | 'groups' | 'roles' | 'keywords';
 
 function SearchIcon() { return <svg className="search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.8-3.8" /></svg>; }
 function initials(value: string) { return value.split(/[\s-]+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase(); }
@@ -34,6 +35,7 @@ export default function HomePage() {
   const [groups, setGroups] = useState<AreaGroupDto[]>([]);
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [loaded, setLoaded] = useState<Record<Dataset, boolean>>({ orgs: false, resources: false, groups: false, roles: false, keywords: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [heroQuery, setHeroQuery] = useState('');
@@ -61,22 +63,23 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
+    const apply = <T,>(dataset: Dataset, setter: (data: T) => void) => (data: T) => {
+      if (cancelled) return;
+      setter(data);
+      setLoaded((current) => ({ ...current, [dataset]: true }));
+    };
 
     const requests = [
-      fetch(`/api/v1/${env}/resource/orgs`)
-        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<OrgList>; })
-        .then((data) => { if (!cancelled) setOrgs(data.orgs ?? {}); }),
-      fetch(`/api/v1/${env}/resource/resourcelist/summary?includeApps=true&includeAltinn2=true`)
-        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<ResourceSummary[]>; })
-        .then((data) => { if (!cancelled) setResources(data); }),
+      fetchJson<OrgList>(`/api/v1/${env}/resource/orgs`)
+        .then((data) => apply<Record<string, Org>>('orgs', setOrgs)(data.orgs ?? {})),
+      fetchJson<ResourceSummary[]>(`/api/v1/${env}/resource/resourcelist/summary?includeApps=true&includeAltinn2=true`)
+        .then(apply('resources', setResources)),
       fetchPackageGroupsBilingual(env)
-        .then((data) => { if (!cancelled) setGroups(data); }),
-      fetch(`/api/v1/${env}/meta/info/roles`)
-        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<RoleDto[]>; })
-        .then((data) => { if (!cancelled) setRoles(data); }),
-      fetch(`/api/v1/${env}/resource/keywords`)
-        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<string[]>; })
-        .then((data) => { if (!cancelled) setKeywords(data); }),
+        .then(apply('groups', setGroups)),
+      fetchJson<RoleDto[]>(`/api/v1/${env}/meta/info/roles`)
+        .then(apply('roles', setRoles)),
+      fetchJson<string[]>(`/api/v1/${env}/resource/keywords?includeApps=true&includeAltinn2=true`)
+        .then(apply('keywords', setKeywords)),
     ];
 
     Promise.allSettled(requests).then((results) => {
@@ -101,6 +104,13 @@ export default function HomePage() {
   const heroResults = useMemo(() => { const hq = heroQuery.trim().toLowerCase(); if (hq.length < 2) return []; return resources.filter((r) => `${getText(r.title, lang)} ${getText(r.description, lang)} ${r.identifier} ${getText(r.hasCompetentAuthority?.name, lang)}`.toLowerCase().includes(hq)).slice(0, 6); }, [heroQuery, resources, lang]);
   const searchResults = useMemo(() => resources.filter((r) => (!q || `${getText(r.title, lang)} ${getText(r.description, lang)} ${r.identifier}`.toLowerCase().includes(q)) && (!selectedTypes.length || selectedTypes.includes(typeKey(r.resourceType)))), [resources, q, selectedTypes, lang]);
   const format = (n: number) => new Intl.NumberFormat(lang === 'nb' ? 'nb-NO' : 'en-GB').format(n);
+  const statValues: (number | null)[] = [
+    loaded.resources ? resources.length : null,
+    loaded.orgs ? Object.keys(orgs).length : null,
+    loaded.groups ? packageCount : null,
+    loaded.roles ? roles.length : null,
+    loaded.keywords ? keywords.length : null,
+  ];
   const submitHero = () => heroQuery.trim().length >= 2 && navigate(`/results?q=${encodeURIComponent(heroQuery.trim())}`);
 
   return <div className="home-page fade-up">
@@ -114,7 +124,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-      <div className="hero-stats section-inner">{[resources.length, Object.keys(orgs).length, packageCount, roles.length, keywords.length].map((value, i) => <div className="stat-card" key={copy.stats[i]}><strong>{loading ? '—' : format(value)}</strong><span>{copy.stats[i]}</span></div>)}</div>
+      <div className="hero-stats section-inner">{statValues.map((value, i) => <div className="stat-card" key={copy.stats[i]}><strong>{value === null ? '—' : format(value)}</strong><span>{copy.stats[i]}</span></div>)}</div>
     </section>
 
     <section className="catalogue-section">
@@ -148,6 +158,28 @@ export default function HomePage() {
 }
 
 function Filter({ value, setValue, placeholder, wide = false }: { value: string; setValue: (value: string) => void; placeholder: string; wide?: boolean }) { return <label className={`filter-input${wide ? ' wide' : ''}`}><SearchIcon /><input value={value} onChange={(e) => setValue(e.target.value)} placeholder={placeholder} aria-label={placeholder} /></label>; }
+
+async function fetchJson<T>(url: string, retries = 1): Promise<T> {
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+    const contentType = response.headers.get('content-type') ?? '';
+
+    if (response.ok && contentType.includes('json'))
+      return response.json() as Promise<T>;
+
+    const transient = response.status >= 500 || (response.ok && !contentType.includes('json'));
+    if (transient && attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      continue;
+    }
+
+    if (!response.ok)
+      throw new Error(`${response.status} ${response.statusText}`);
+
+    throw new Error(`Expected JSON but received ${contentType || 'an unknown content type'}`);
+  }
+}
+
 function Distribution({ stats }: { stats: [string, number][] }) { return <div className="distribution" aria-hidden="true">{stats.map(([type, count]) => <span key={type} style={{ flex: count, background: TYPE_COLORS[type] }} />)}</div>; }
 function PackageLinks({ items, lang, heading }: { items: { pkg: PackageDto; area: AreaDto; group: AreaGroupDto }[]; lang: string; heading?: string }) {
   return <div className="package-links-wrap">{heading && <div className="results-count">{heading}</div>}<div className="package-link-grid">{items.map(({ pkg, area }) => <Link className="package-link-card" to={packagePath(pkg)} state={{ pkg }} key={pkg.id}><div><strong>{lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name}</strong><small>{area.name}</small></div><span className="chevron">›</span></Link>)}</div></div>;
