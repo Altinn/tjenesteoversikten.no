@@ -89,7 +89,7 @@ export default function HomePage() {
   const submitHero = () => heroQuery.trim().length >= 2 && navigate(`/results?q=${encodeURIComponent(heroQuery.trim())}`);
 
   return <div className="home-page fade-up">
-    <section className="hero section-inner">
+    <section className="hero">
       <div className="hero-image-panel">
         <div className="hero-copy">
           <h1>{copy.title}</h1><p>{copy.intro}</p>
@@ -98,8 +98,8 @@ export default function HomePage() {
             {heroQuery.trim().length >= 2 && <div className="search-dropdown">{heroResults.map((r) => <Link to={`/resource/${encodeURIComponent(r.identifier)}`} key={r.identifier}><span className={`type-chip type-${typeKey(r.resourceType)}`}>{r.resourceType}</span><strong>{getText(r.title, lang)}</strong><small>{getText(r.hasCompetentAuthority?.name, lang)}</small></Link>)}{!heroResults.length && <div className="empty-row">{copy.noResults}</div>}</div>}
           </div>
         </div>
-        <div className="hero-stats">{[resources.length, Object.keys(orgs).length, packageCount, roles.length, keywords.length].map((value, i) => <div className="stat-card" key={copy.stats[i]}><strong>{loading ? '—' : format(value)}</strong><span>{copy.stats[i]}</span></div>)}</div>
       </div>
+      <div className="hero-stats section-inner">{[resources.length, Object.keys(orgs).length, packageCount, roles.length, keywords.length].map((value, i) => <div className="stat-card" key={copy.stats[i]}><strong>{loading ? '—' : format(value)}</strong><span>{copy.stats[i]}</span></div>)}</div>
     </section>
 
     <section className="catalogue-section">
