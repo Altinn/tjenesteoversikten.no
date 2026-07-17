@@ -7,6 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMemoryCache();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
 
 // Resource Registry proxy configuration
 builder.Services.Configure<ResourceRegistryOptions>(
@@ -34,6 +38,8 @@ builder.Services.AddHttpClient("Metadata", client =>
 builder.Services.AddScoped<IMetadataClient, MetadataClient>();
 
 var app = builder.Build();
+
+app.UseResponseCompression();
 
 // Vite bundles under /assets have content-hashed names and can be cached forever.
 // index.html (and other unhashed files) must revalidate on every load — a heuristically

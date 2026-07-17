@@ -5,6 +5,7 @@ using Altinn.Authorization.ABAC.Xacml;
 using Altinn.Authorization.Api.Contracts.ResourceRegistry;
 using Altinn.ResourceRegistry.Core.Models;
 using AltinnServiceCatalogue.Server.Configuration;
+using AltinnServiceCatalogue.Server.Models;
 using AltinnServiceCatalogue.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -43,6 +44,46 @@ public class ResourceRegistryController(
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "Upstream request failed for GetResourceList in {Environment}", environment);
+            return StatusCode(StatusCodes.Status502BadGateway, "Upstream service unavailable");
+        }
+    }
+
+    [HttpGet("resourcelist/summary")]
+    [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
+    [ProducesResponseType<List<ResourceSummaryDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetResourceListSummary(
+        [FromRoute] string environment,
+        [FromQuery] bool? includeApps,
+        [FromQuery] bool? includeAltinn2,
+        CancellationToken ct)
+    {
+        if (!TryResolveBaseUrl(environment, out var baseUrl))
+            return BadRequest($"Unknown environment: {environment}");
+
+        try
+        {
+            var resources = await cacheService.GetResourceListAsync(baseUrl, includeApps, includeAltinn2, ct);
+            var result = resources.Select(resource => new ResourceSummaryDto(
+                resource.Identifier ?? string.Empty,
+                resource.Title ?? new Dictionary<string, string>(),
+                resource.Description ?? new Dictionary<string, string>(),
+                resource.Status,
+                resource.Delegable,
+                resource.Visible,
+                resource.ResourceType.ToString(),
+                resource.HasCompetentAuthority is null
+                    ? null
+                    : new CompetentAuthoritySummaryDto(
+                        resource.HasCompetentAuthority.Name,
+                        resource.HasCompetentAuthority.Organization,
+                        resource.HasCompetentAuthority.Orgcode)))
+                .ToList();
+
+            return Ok(result);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Upstream request failed for GetResourceListSummary in {Environment}", environment);
             return StatusCode(StatusCodes.Status502BadGateway, "Upstream service unavailable");
         }
     }

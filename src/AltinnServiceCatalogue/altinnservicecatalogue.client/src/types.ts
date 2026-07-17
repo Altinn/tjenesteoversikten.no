@@ -69,6 +69,17 @@ export interface ServiceResource {
   versionId: number;
 }
 
+export interface ResourceSummary {
+  identifier: string;
+  title: Record<string, string>;
+  description: Record<string, string>;
+  status?: string;
+  delegable: boolean;
+  visible: boolean;
+  hasCompetentAuthority?: CompetentAuthority;
+  resourceType: string;
+}
+
 // Access Management Metadata types
 
 export interface MetaProviderType {
