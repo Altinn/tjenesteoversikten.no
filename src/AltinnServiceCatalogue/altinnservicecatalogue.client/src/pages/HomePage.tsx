@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, RoleDto, ServiceResource } from '../types';
+import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, ResourceSummary, RoleDto } from '../types';
 import { fetchPackageGroupsBilingual, getText, packagePath } from '../helpers';
 import { useEnv } from '../env';
 import { useLang } from '../lang';
@@ -30,7 +30,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const activeTab = TAB_PATHS[location.pathname] ?? 'owners';
   const [orgs, setOrgs] = useState<Record<string, Org>>({});
-  const [resources, setResources] = useState<ServiceResource[]>([]);
+  const [resources, setResources] = useState<ResourceSummary[]>([]);
   const [groups, setGroups] = useState<AreaGroupDto[]>([]);
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -61,15 +61,30 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      fetch(`/api/v1/${env}/resource/orgs`).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<OrgList>; }),
-      fetch(`/api/v1/${env}/resource/resourcelist?includeApps=true&includeAltinn2=true`).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<ServiceResource[]>; }),
-      fetchPackageGroupsBilingual(env),
-      fetch(`/api/v1/${env}/meta/info/roles`).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<RoleDto[]>; }),
-      fetch(`/api/v1/${env}/resource/keywords`).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<string[]>; }),
-    ]).then(([orgData, resourceData, groupData, roleData, keywordData]) => {
-      if (!cancelled) { setOrgs(orgData.orgs ?? {}); setResources(resourceData); setGroups(groupData); setRoles(roleData); setKeywords(keywordData); }
-    }).catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e))).finally(() => !cancelled && setLoading(false));
+
+    const requests = [
+      fetch(`/api/v1/${env}/resource/orgs`)
+        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<OrgList>; })
+        .then((data) => { if (!cancelled) setOrgs(data.orgs ?? {}); }),
+      fetch(`/api/v1/${env}/resource/resourcelist/summary?includeApps=true&includeAltinn2=true`)
+        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<ResourceSummary[]>; })
+        .then((data) => { if (!cancelled) setResources(data); }),
+      fetchPackageGroupsBilingual(env)
+        .then((data) => { if (!cancelled) setGroups(data); }),
+      fetch(`/api/v1/${env}/meta/info/roles`)
+        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<RoleDto[]>; })
+        .then((data) => { if (!cancelled) setRoles(data); }),
+      fetch(`/api/v1/${env}/resource/keywords`)
+        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<string[]>; })
+        .then((data) => { if (!cancelled) setKeywords(data); }),
+    ];
+
+    Promise.allSettled(requests).then((results) => {
+      if (cancelled) return;
+      const failures = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+      setError(failures.map((failure) => failure.reason instanceof Error ? failure.reason.message : String(failure.reason)).join(', '));
+      setLoading(false);
+    });
     return () => { cancelled = true; };
   }, [env]);
 
@@ -138,7 +153,7 @@ function PackageLinks({ items, lang, heading }: { items: { pkg: PackageDto; area
   return <div className="package-links-wrap">{heading && <div className="results-count">{heading}</div>}<div className="package-link-grid">{items.map(({ pkg, area }) => <Link className="package-link-card" to={packagePath(pkg)} state={{ pkg }} key={pkg.id}><div><strong>{lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name}</strong><small>{area.name}</small></div><span className="chevron">›</span></Link>)}</div></div>;
 }
 function RoleGroups({ roles }: { roles: RoleDto[] }) { const groups = useMemo(() => { const map = new Map<string, RoleDto[]>(); roles.forEach((r) => { const key = r.provider?.name ?? 'Altinn'; map.set(key, [...(map.get(key) ?? []), r]); }); return [...map.entries()]; }, [roles]); return <div className="role-groups">{groups.map(([provider, items]) => <section key={provider}><h2>{provider}</h2><div className="role-list">{items.map((r) => <Link to={`/role/${r.id}`} key={r.id}><strong>{r.name}</strong><span>{r.description}</span><code>{r.code}</code></Link>)}</div></section>)}</div>; }
-function Statistics({ resources, typeStats, lang, format, distribution }: { resources: ServiceResource[]; typeStats: [string, number][]; lang: string; format: (n: number) => string; distribution: string }) {
+function Statistics({ resources, typeStats, lang, format, distribution }: { resources: ResourceSummary[]; typeStats: [string, number][]; lang: string; format: (n: number) => string; distribution: string }) {
   const delegable = resources.filter((r) => r.delegable).length, visible = resources.filter((r) => r.visible).length, active = resources.filter((r) => r.status?.toLowerCase() === 'active').length;
   const percent = (n: number) => resources.length ? Math.round(n / resources.length * 100) : 0;
   const cards: [string, number, string][] = lang === 'nb' ? [['Delegerbare tjenester', percent(delegable), '#9B7BE8'], ['Synlige tjenester', percent(visible), '#37C08B'], ['Aktive tjenester', percent(active), '#4098E8'], ['Totalt registrert', resources.length, '#E9A23B']] : [['Delegable services', percent(delegable), '#9B7BE8'], ['Visible services', percent(visible), '#37C08B'], ['Active services', percent(active), '#4098E8'], ['Total registered', resources.length, '#E9A23B']];
