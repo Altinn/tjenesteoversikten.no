@@ -81,8 +81,16 @@ a { color:var(--t-accent); }
 .search-dropdown a strong { font-size:14.5px; }
 .search-dropdown a small { margin-left:auto; color:var(--t-muted); white-space:nowrap; }
 .empty-row { padding:18px; color:var(--t-muted); text-align:center; }
-.type-chip { display:inline-flex; align-items:center; min-width:max-content; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; }
-.type-AltinnApp { color:#2677bd; background:rgba(64,152,232,.15); }.type-Altinn2Service { color:#238158; background:rgba(47,168,117,.15); }.type-GenericAccessResource { color:#9b6517; background:rgba(201,138,42,.16); }.type-MaskinportenSchema { color:#7657c5; background:rgba(155,123,232,.16); }.type-CorrespondenceService { color:#b44a4a; background:rgba(217,106,106,.16); }.type-Other { color:var(--muted); background:rgba(107,122,147,.15); }
+.type-chip { display:inline-flex; align-items:center; min-width:max-content; padding:3px 9px; border-radius:99px; background:rgba(107,122,147,.15); color:var(--t-muted); font-size:11px; font-weight:600; }
+.type-Systemresource { color:#247c73; background:rgba(47,140,130,.15); }
+.type-MaskinportenSchema { color:#7657c5; background:rgba(155,123,232,.16); }
+.type-Altinn2Service { color:#238158; background:rgba(47,168,117,.15); }
+.type-AltinnApp { color:#2677bd; background:rgba(64,152,232,.15); }
+.type-GenericAccessResource { color:#9b6517; background:rgba(201,138,42,.16); }
+.type-BrokerService { color:#b86c16; background:rgba(224,119,50,.16); }
+.type-CorrespondenceService { color:#b44a4a; background:rgba(217,106,106,.16); }
+.type-Consent { color:#a44482; background:rgba(194,91,155,.15); }
+.type-MigratedApp { color:#3d7180; background:rgba(79,140,157,.15); }
 .hero-stats { position:relative; z-index:1; display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin:0 auto; padding-top:22px; padding-bottom:26px; }
 .stat-card,.owner-card,.type-card,.area-card,.kpi-grid article,.distribution-card { border:1px solid var(--t-line); background:var(--t-surface); }
 .stat-card { padding:14px 18px; border-radius:12px; }
