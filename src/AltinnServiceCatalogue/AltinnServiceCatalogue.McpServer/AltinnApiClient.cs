@@ -189,7 +189,8 @@ public class AltinnApiClient
     {
         using var client = CreateClient();
         var url = $"{BaseUrlFor(environment)}{MetadataBase}/info/roles/{Uri.EscapeDataString(id)}";
-        return await client.GetFromJsonAsync<RoleDto>(url, JsonOptions, ct);
+        var roles = await client.GetFromJsonAsync<List<RoleDto>>(url, JsonOptions, ct);
+        return roles?.FirstOrDefault();
     }
 
     public async Task<List<RolePackageDto>> GetRolePackagesAsync(string role, string variant, bool includeResources = false, string environment = DefaultEnvironment, CancellationToken ct = default)
