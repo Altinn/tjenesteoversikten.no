@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, ResourceSummary, RoleDto } from '../types';
+import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, PolicyStatistics as PolicyStatisticsData, ResourceSummary, RoleDto } from '../types';
 import { fetchPackageGroupsBilingual, getText, packagePath } from '../helpers';
 import { useEnv } from '../env';
 import { useLang } from '../lang';
@@ -144,7 +144,7 @@ export default function HomePage() {
         </>}
         {activeTab === 'roles' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.roles} /><RoleGroups roles={roles.filter((r) => !q || `${r.name} ${r.code} ${r.description}`.toLowerCase().includes(q))} /></>}
         {activeTab === 'keywords' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.keywords} /><div className="keyword-cloud">{keywords.filter((word) => !q || word.toLowerCase().includes(q)).map((word) => <Link to={`/keyword/${encodeURIComponent(word)}`} key={word}>{word}</Link>)}</div></>}
-        {activeTab === 'statistics' && <Statistics resources={resources} typeStats={typeStats} lang={lang} format={format} distribution={copy.distribution} />}
+        {activeTab === 'statistics' && <Statistics resources={resources} typeStats={typeStats} lang={lang} format={format} distribution={copy.distribution} env={env} />}
         {activeTab === 'search' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.placeholder} wide /><div className="filter-chips">{typeStats.map(([type]) => <button className={selectedTypes.includes(type) ? 'active' : ''} onClick={() => setSelectedTypes((old) => old.includes(type) ? old.filter((x) => x !== type) : [...old, type])} key={type}>{type}</button>)}</div><div className="results-count">{format(searchResults.length)} {copy.results}</div><div className="result-list">{searchResults.slice(0, 100).map((r) => <Link to={`/resource/${encodeURIComponent(r.identifier)}`} key={r.identifier}><span className={`type-chip type-${r.resourceType}`}>{r.resourceType}</span><div><strong>{getText(r.title, lang)}</strong><p>{getText(r.description, lang)}</p></div><small>{getText(r.hasCompetentAuthority?.name, lang)}</small><span className="chevron">›</span></Link>)}</div></>}
         {loading && <div className="loading-state" aria-live="polite">{copy.loading}</div>}
       </div>
@@ -175,14 +175,155 @@ async function fetchJson<T>(url: string, retries = 1): Promise<T> {
   }
 }
 
-function Distribution({ stats }: { stats: [string, number][] }) { return <div className="distribution" aria-hidden="true">{stats.map(([type, count]) => <span key={type} style={{ flex: count, background: getResourceTypeColor(type) }} />)}</div>; }
+const ALGORITHM_COLORS = ['#4098E8', '#9B7BE8', '#E07732', '#37C08B', '#D96A6A', '#C25B9B'];
+function getAlgorithmColor(algorithm: string) {
+  const hash = [...algorithm].reduce((value, character) => value + character.charCodeAt(0), 0);
+  return ALGORITHM_COLORS[hash % ALGORITHM_COLORS.length];
+}
+function Distribution({ stats, colorFor = getResourceTypeColor }: { stats: [string, number][]; colorFor?: (value: string) => string }) { return <div className="distribution" aria-hidden="true">{stats.map(([type, count]) => <span key={type} style={{ flex: count, background: colorFor(type) }} />)}</div>; }
 function PackageLinks({ items, lang, heading }: { items: { pkg: PackageDto; area: AreaDto; group: AreaGroupDto }[]; lang: string; heading?: string }) {
   return <div className="package-links-wrap">{heading && <div className="results-count">{heading}</div>}<div className="package-link-grid">{items.map(({ pkg, area }) => <Link className="package-link-card" to={packagePath(pkg)} state={{ pkg }} key={pkg.id}><div><strong>{lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name}</strong><small>{area.name}</small></div><span className="chevron">›</span></Link>)}</div></div>;
 }
 function RoleGroups({ roles }: { roles: RoleDto[] }) { const groups = useMemo(() => { const map = new Map<string, RoleDto[]>(); roles.forEach((r) => { const key = r.provider?.name ?? 'Altinn'; map.set(key, [...(map.get(key) ?? []), r]); }); return [...map.entries()]; }, [roles]); return <div className="role-groups">{groups.map(([provider, items]) => <section key={provider}><h2>{provider}</h2><div className="role-list">{items.map((r) => <Link to={`/role/${r.id}`} key={r.id}><strong>{r.name}</strong><span>{r.description}</span><code>{r.code}</code></Link>)}</div></section>)}</div>; }
-function Statistics({ resources, typeStats, lang, format, distribution }: { resources: ResourceSummary[]; typeStats: [string, number][]; lang: string; format: (n: number) => string; distribution: string }) {
+function Statistics({ resources, typeStats, lang, format, distribution, env }: { resources: ResourceSummary[]; typeStats: [string, number][]; lang: string; format: (n: number) => string; distribution: string; env: string }) {
   const delegable = resources.filter((r) => r.delegable).length, visible = resources.filter((r) => r.visible).length, active = resources.filter((r) => r.status?.toLowerCase() === 'active').length;
   const percent = (n: number) => resources.length ? Math.round(n / resources.length * 100) : 0;
   const cards: [string, number, string][] = lang === 'nb' ? [['Delegerbare tjenester', percent(delegable), '#9B7BE8'], ['Synlige tjenester', percent(visible), '#37C08B'], ['Aktive tjenester', percent(active), '#4098E8'], ['Totalt registrert', resources.length, '#E9A23B']] : [['Delegable services', percent(delegable), '#9B7BE8'], ['Visible services', percent(visible), '#37C08B'], ['Active services', percent(active), '#4098E8'], ['Total registered', resources.length, '#E9A23B']];
-  return <><div className="kpi-grid">{cards.map(([label, value, color], i) => <article key={label}><span>{label}</span><strong>{i === 3 ? format(value) : `${value} %`}</strong><div><i style={{ width: i === 3 ? '100%' : `${value}%`, background: color }} /></div></article>)}</div><article className="distribution-card"><header><span>{distribution}</span><span>{format(resources.length)}</span></header><Distribution stats={typeStats} /><div className="legend">{typeStats.map(([type, count]) => <span key={type}><i style={{ background: getResourceTypeColor(type) }} />{type} {format(count)}</span>)}</div></article></>;
+  return <>
+    <div className="kpi-grid">{cards.map(([label, value, color], i) => <article key={label}><span>{label}</span><strong>{i === 3 ? format(value) : `${value} %`}</strong><div><i style={{ width: i === 3 ? '100%' : `${value}%`, background: color }} /></div></article>)}</div>
+    <article className="distribution-card"><header><span>{distribution}</span><span>{format(resources.length)}</span></header><Distribution stats={typeStats} /><div className="legend">{typeStats.map(([type, count]) => <span key={type}><i style={{ background: getResourceTypeColor(type) }} />{type} {format(count)}</span>)}</div></article>
+    <PolicyStatistics env={env} lang={lang} format={format} />
+  </>;
+}
+
+function PolicyStatistics({ env, lang, format }: { env: string; lang: string; format: (n: number) => string }) {
+  const [statistics, setStatistics] = useState<PolicyStatisticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const text = lang === 'nb' ? {
+    title: 'XACML policyanalyse',
+    loading: 'Analyserer policyer. Resten av statistikken kan brukes mens du venter …',
+    error: 'Kunne ikke hente policyanalysen',
+    distribution: 'RuleCombiningAlgId-fordeling',
+    policyUrn: 'Policy-algoritme i rule-feltet',
+    deny: 'Policyer med Deny-regler',
+    mustBePresent: 'MustBePresent = true',
+    conditions: 'Policyer med vilkår',
+    legacy: 'Feilvurdert av eldre PDP',
+    coverage: 'Dekning og datakvalitet',
+    scanned: 'ressurser skannet',
+    fetched: 'policyer hentet',
+    parsed: 'policyer tolket',
+    noPolicy: 'uten policy (404)',
+    fetchFailures: 'hentefeil',
+    parseFailures: 'tolkefeil',
+    duration: 'skannetid',
+    drilldown: 'Policyer med ikke-standard algoritme',
+    capped: 'Listen er begrenset',
+    of: 'av',
+    rules: 'regler',
+    condition: 'vilkår',
+    none: '(mangler)',
+  } : {
+    title: 'XACML policy analysis',
+    loading: 'Analysing policies. The rest of the statistics remains available while you wait …',
+    error: 'Could not load the policy analysis',
+    distribution: 'RuleCombiningAlgId distribution',
+    policyUrn: 'Policy algorithm in rule slot',
+    deny: 'Policies with Deny rules',
+    mustBePresent: 'MustBePresent = true',
+    conditions: 'Policies with conditions',
+    legacy: 'Mis-evaluated by legacy PDP',
+    coverage: 'Coverage and data quality',
+    scanned: 'resources scanned',
+    fetched: 'policies fetched',
+    parsed: 'policies parsed',
+    noPolicy: 'without policy (404)',
+    fetchFailures: 'fetch failures',
+    parseFailures: 'parse failures',
+    duration: 'scan duration',
+    drilldown: 'Policies with non-default algorithms',
+    capped: 'The list is capped',
+    of: 'of',
+    rules: 'rules',
+    condition: 'condition',
+    none: '(missing)',
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    setStatistics(null);
+    fetch(`/api/v1/${env}/resource/policy/statistics`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    }).then(async (response) => {
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      return response.json() as Promise<PolicyStatisticsData>;
+    }).then((data) => {
+      setStatistics(data);
+      setLoading(false);
+    }).catch((reason: unknown) => {
+      if (reason instanceof DOMException && reason.name === 'AbortError') return;
+      setError(reason instanceof Error ? reason.message : String(reason));
+      setLoading(false);
+    });
+    return () => controller.abort();
+  }, [env]);
+
+  const algorithmName = (algorithm: string) => algorithm ? algorithm.split(':').at(-1) ?? algorithm : text.none;
+  if (loading) return <section aria-labelledby="policy-statistics-title"><h2 id="policy-statistics-title">{text.title}</h2><article className="distribution-card">{text.loading}</article></section>;
+  if (error || !statistics) return <section aria-labelledby="policy-statistics-title"><h2 id="policy-statistics-title">{text.title}</h2><div className="notice">{text.error}{error ? ` (${error})` : ''}.</div></section>;
+
+  const algorithmStats: [string, number][] = statistics.algorithmUsage.map(({ algorithm, count }) => [algorithm, count]);
+  const denominator = Math.max(statistics.policiesParsed, 1);
+  const flagCards: [string, number, string][] = [
+    [text.policyUrn, statistics.policiesUsingPolicyCombiningAlgorithmInRuleSlot, '#E07732'],
+    [text.deny, statistics.policiesWithDenyRules, '#D96A6A'],
+    [text.mustBePresent, statistics.policiesWithMustBePresent, '#9B7BE8'],
+    [text.conditions, statistics.policiesWithConditions, '#4098E8'],
+    [text.legacy, statistics.legacyIncorrectEvaluationCount, '#C23B53'],
+  ];
+
+  return <section aria-labelledby="policy-statistics-title">
+    <h2 id="policy-statistics-title">{text.title}</h2>
+    <article className="distribution-card">
+      <header><span>{text.distribution}</span><span>{format(statistics.policiesParsed)}</span></header>
+      <Distribution stats={algorithmStats} colorFor={getAlgorithmColor} />
+      <div className="legend">{statistics.algorithmUsage.map(({ algorithm, kind, count }) => <span key={algorithm} title={algorithm}><i style={{ background: getAlgorithmColor(algorithm) }} />{algorithmName(algorithm)} · {kind} {format(count)}</span>)}</div>
+    </article>
+    <div className="kpi-grid">{flagCards.map(([label, value, color]) => <article key={label}><span>{label}</span><strong>{format(value)}</strong><div><i style={{ width: `${Math.round(value / denominator * 100)}%`, background: color }} /></div></article>)}</div>
+    <article className="distribution-card">
+      <header><span>{text.coverage}</span><span>{statistics.environment.toUpperCase()}</span></header>
+      <div className="legend">
+        <span>{format(statistics.resourcesScanned)} {text.scanned}</span>
+        <span>{format(statistics.policiesFetched)} {text.fetched}</span>
+        <span>{format(statistics.policiesParsed)} {text.parsed}</span>
+        <span>{format(statistics.resourcesWithoutPolicy)} {text.noPolicy}</span>
+        <span>{format(statistics.fetchFailures)} {text.fetchFailures}</span>
+        <span>{format(statistics.parseFailures)} {text.parseFailures}</span>
+        <span>{format(statistics.scanDurationMilliseconds)} ms {text.duration}</span>
+      </div>
+    </article>
+    <h3>{text.drilldown}</h3>
+    <div className="results-count">
+      {format(statistics.nonDefaultResources.length)} {text.of} {format(statistics.nonDefaultResourceCount)}
+      {statistics.nonDefaultResourcesCapped && <> · {text.capped} ({format(statistics.nonDefaultResourceLimit)})</>}
+    </div>
+    <div className="result-list">{statistics.nonDefaultResources.map((resource) => {
+      const flags = [
+        resource.denyRuleCount ? `Deny × ${format(resource.denyRuleCount)}` : '',
+        resource.hasMustBePresent ? 'MustBePresent' : '',
+        resource.hasCondition ? text.condition : '',
+        resource.usesPolicyCombiningAlgorithmInRuleSlot ? text.policyUrn : '',
+        resource.wouldLegacyPdpEvaluateIncorrectly ? text.legacy : '',
+      ].filter(Boolean).join(' · ');
+      return <Link to={`/resource/${encodeURIComponent(resource.resourceId)}`} key={resource.resourceId}>
+        <span className="type-chip">{resource.algorithmKind}</span>
+        <div><strong>{resource.resourceId}</strong><p title={resource.algorithm}>{algorithmName(resource.algorithm)} · {format(resource.ruleCount)} {text.rules}</p></div>
+        <small>{flags}</small><span className="chevron">›</span>
+      </Link>;
+    })}</div>
+  </section>;
 }

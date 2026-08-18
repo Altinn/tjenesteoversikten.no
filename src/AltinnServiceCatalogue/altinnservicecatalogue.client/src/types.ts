@@ -316,3 +316,43 @@ export interface CaseSensitiveStatsJobStatus {
   result?: CaseSensitiveStatistics;
   error?: string;
 }
+export interface PolicyAlgorithmUsage {
+  algorithm: string;
+  kind: 'rule-combining' | 'policy-combining' | 'unrecognised' | string;
+  count: number;
+}
+
+export interface PolicyResourceStatistics {
+  resourceId: string;
+  algorithm: string;
+  algorithmKind: 'rule-combining' | 'policy-combining' | 'unrecognised' | string;
+  ruleCount: number;
+  denyRuleCount: number;
+  hasMustBePresent: boolean;
+  hasCondition: boolean;
+  usesPolicyCombiningAlgorithmInRuleSlot: boolean;
+  wouldLegacyPdpEvaluateIncorrectly: boolean;
+}
+
+export interface PolicyStatistics {
+  environment: string;
+  generatedAt: string;
+  scanDurationMilliseconds: number;
+  maxConcurrency: number;
+  nonDefaultResourceLimit: number;
+  resourcesScanned: number;
+  policiesFetched: number;
+  policiesParsed: number;
+  resourcesWithoutPolicy: number;
+  fetchFailures: number;
+  parseFailures: number;
+  policiesUsingPolicyCombiningAlgorithmInRuleSlot: number;
+  policiesWithDenyRules: number;
+  policiesWithMustBePresent: number;
+  policiesWithConditions: number;
+  legacyIncorrectEvaluationCount: number;
+  algorithmUsage: PolicyAlgorithmUsage[];
+  nonDefaultResourceCount: number;
+  nonDefaultResourcesCapped: boolean;
+  nonDefaultResources: PolicyResourceStatistics[];
+}

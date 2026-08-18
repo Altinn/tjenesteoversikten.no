@@ -55,6 +55,16 @@ public sealed class AltinnTools
         return ToJson(result);
     }
 
+    [McpServerTool, Description("Scan every resource policy and aggregate XACML RuleCombiningAlgId usage, Deny rules, MustBePresent, conditions, legacy-PDP risk, and fetch/parse coverage.")]
+    public static async Task<string> GetPolicyStatistics(
+        AltinnApiClient client,
+        CancellationToken ct = default,
+        [Description(EnvDescription)] string environment = AltinnApiClient.DefaultEnvironment)
+    {
+        var result = await client.GetPolicyStatisticsAsync(environment, ct);
+        return ToJson(result);
+    }
+
     [McpServerTool, Description("Get the list of organizations registered in the Altinn Resource Registry, including their names, logos, and org numbers.")]
     public static async Task<string> GetOrganizations(
         AltinnApiClient client,

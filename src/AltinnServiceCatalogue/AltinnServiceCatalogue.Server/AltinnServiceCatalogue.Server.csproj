@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Altinn.Authorization.Api.Contracts\Altinn.Authorization.Api.Contracts.csproj" />
+    <ProjectReference Include="..\AltinnServiceCatalogue.PolicyStatistics\AltinnServiceCatalogue.PolicyStatistics.csproj" />
     <ProjectReference Include="..\altinnservicecatalogue.client\altinnservicecatalogue.client.esproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

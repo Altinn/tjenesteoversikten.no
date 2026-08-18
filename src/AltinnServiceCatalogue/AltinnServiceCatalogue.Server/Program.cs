@@ -24,6 +24,7 @@ builder.Services.AddHttpClient("ResourceRegistry", client =>
 
 builder.Services.AddScoped<IResourceRegistryClient, ResourceRegistryClient>();
 builder.Services.AddSingleton<IResourceCacheService, ResourceCacheService>();
+builder.Services.AddScoped<IPolicyStatisticsService, PolicyStatisticsService>();
 
 // Metadata proxy configuration
 builder.Services.Configure<MetadataOptions>(

@@ -4,6 +4,7 @@ using Altinn.Authorization.ABAC.Utils;
 using Altinn.Authorization.ABAC.Xacml;
 using Altinn.Authorization.Api.Contracts.ResourceRegistry;
 using Altinn.ResourceRegistry.Core.Models;
+using AltinnServiceCatalogue.PolicyStatistics;
 using AltinnServiceCatalogue.Server.Configuration;
 using AltinnServiceCatalogue.Server.Models;
 using AltinnServiceCatalogue.Server.Services;
@@ -18,12 +19,38 @@ namespace AltinnServiceCatalogue.Server.Controllers;
 public class ResourceRegistryController(
     IResourceRegistryClient client,
     IResourceCacheService cacheService,
+    IPolicyStatisticsService policyStatisticsService,
     IMemoryCache memoryCache,
     IOptions<ResourceRegistryOptions> options,
     ILogger<ResourceRegistryController> logger) : ControllerBase
 {
     private readonly ResourceRegistryOptions _options = options.Value;
     private static readonly TimeSpan PolicyCacheDuration = TimeSpan.FromMinutes(30);
+
+    [HttpGet("policy/statistics")]
+    [ProducesResponseType<PolicyStatisticsDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPolicyStatistics(
+        [FromRoute] string environment,
+        CancellationToken ct)
+    {
+        if (!TryResolveBaseUrl(environment, out var baseUrl))
+            return BadRequest($"Unknown environment: {environment}");
+
+        try
+        {
+            return Ok(await policyStatisticsService.GetAsync(environment, baseUrl, ct));
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Upstream request failed for policy statistics in {Environment}", environment);
+            return StatusCode(StatusCodes.Status502BadGateway, "Upstream service unavailable");
+        }
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogError(ex, "Timed out while calculating policy statistics in {Environment}", environment);
+            return StatusCode(StatusCodes.Status504GatewayTimeout, "Policy statistics scan timed out");
+        }
+    }
 
     [HttpGet("resourcelist")]
     [ProducesResponseType<List<ServiceResource>>(StatusCodes.Status200OK)]

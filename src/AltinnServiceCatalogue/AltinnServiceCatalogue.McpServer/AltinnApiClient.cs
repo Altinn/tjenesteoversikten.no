@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Altinn.Authorization.Api.Contracts.AccessManagement;
 using Altinn.Authorization.Api.Contracts.ResourceRegistry;
 using Altinn.ResourceRegistry.Core.Models;
+using AltinnServiceCatalogue.PolicyStatistics;
 
 namespace AltinnServiceCatalogue.McpServer;
 
@@ -16,6 +18,7 @@ public class AltinnApiClient
 
     private const string ResourceRegistryBase = "/resourceregistry/api/v1/resource";
     private const string MetadataBase = "/accessmanagement/api/v1/meta";
+    private static readonly TimeSpan PolicyStatisticsCacheDuration = TimeSpan.FromMinutes(30);
 
     /// <summary>Resolve the platform base URL for an environment. Anything other than "tt02" maps to production.</summary>
     private static string BaseUrlFor(string? environment) =>
@@ -29,6 +32,11 @@ public class AltinnApiClient
     };
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ConcurrentDictionary<string, CachedPolicyStatistics> _policyStatisticsCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _policyStatisticsLocks =
+        new(StringComparer.OrdinalIgnoreCase);
+    private sealed record CachedPolicyStatistics(DateTimeOffset ExpiresAt, PolicyStatisticsDto Value);
 
     public AltinnApiClient(IHttpClientFactory httpClientFactory)
     {
@@ -42,8 +50,73 @@ public class AltinnApiClient
     public async Task<List<ServiceResource>> GetResourceListAsync(bool includeApps = false, bool includeAltinn2 = false, string environment = DefaultEnvironment, CancellationToken ct = default)
     {
         using var client = CreateClient();
-        var url = $"{BaseUrlFor(environment)}{ResourceRegistryBase}/resourcelist?includeApps={B(includeApps)}&includeAltinn2={B(includeAltinn2)}";
+        var url = $"{BaseUrlFor(environment)}{ResourceRegistryBase}/resourcelist?includeMigratedApps=true&includeApps={B(includeApps)}&includeAltinn2={B(includeAltinn2)}";
         return await client.GetFromJsonAsync<List<ServiceResource>>(url, JsonOptions, ct) ?? [];
+    }
+
+    public async Task<PolicyStatisticsDto> GetPolicyStatisticsAsync(
+        string environment = DefaultEnvironment,
+        CancellationToken ct = default)
+    {
+        var normalizedEnvironment = string.Equals(environment, "tt02", StringComparison.OrdinalIgnoreCase)
+            ? "tt02"
+            : DefaultEnvironment;
+        if (_policyStatisticsCache.TryGetValue(normalizedEnvironment, out var cached)
+            && cached.ExpiresAt > DateTimeOffset.UtcNow)
+        {
+            return cached.Value;
+        }
+
+        var cacheLock = _policyStatisticsLocks.GetOrAdd(
+            normalizedEnvironment,
+            static _ => new SemaphoreSlim(1, 1));
+        await cacheLock.WaitAsync(ct);
+        try
+        {
+            if (_policyStatisticsCache.TryGetValue(normalizedEnvironment, out cached)
+                && cached.ExpiresAt > DateTimeOffset.UtcNow)
+            {
+                return cached.Value;
+            }
+
+            var resources = await GetResourceListAsync(
+                includeApps: true,
+                includeAltinn2: true,
+                normalizedEnvironment,
+                ct);
+            var result = await PolicyStatisticsScanner.ScanAsync(
+                normalizedEnvironment,
+                resources.Select(static resource => resource.Identifier ?? string.Empty),
+                (id, token) => GetResourcePolicyStreamAsync(id, normalizedEnvironment, token),
+                ct);
+
+            _policyStatisticsCache[normalizedEnvironment] = new CachedPolicyStatistics(
+                DateTimeOffset.UtcNow.Add(PolicyStatisticsCacheDuration),
+                result);
+            return result;
+        }
+        finally
+        {
+            cacheLock.Release();
+        }
+    }
+
+    private async Task<Stream> GetResourcePolicyStreamAsync(
+        string id,
+        string environment,
+        CancellationToken ct)
+    {
+        using var client = CreateClient();
+        using var response = await client.GetAsync(
+            $"{BaseUrlFor(environment)}{ResourceRegistryBase}/{Uri.EscapeDataString(id)}/policy",
+            HttpCompletionOption.ResponseHeadersRead,
+            ct);
+        response.EnsureSuccessStatusCode();
+
+        var copy = new MemoryStream();
+        await response.Content.CopyToAsync(copy, ct);
+        copy.Position = 0;
+        return copy;
     }
 
     public async Task<ServiceResource?> GetResourceAsync(string id, string environment = DefaultEnvironment, CancellationToken ct = default)
