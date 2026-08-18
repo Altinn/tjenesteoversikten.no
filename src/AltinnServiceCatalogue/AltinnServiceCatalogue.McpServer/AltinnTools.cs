@@ -12,6 +12,7 @@ public sealed class AltinnTools
     // tt02 (test) is only used when the user explicitly asks for it.
     private const string EnvDescription =
         "Altinn environment: 'prod' (default, production) or 'tt02' (test). Only use 'tt02' when the user explicitly asks for it.";
+    private const string DefaultRoleEntityVariant = "person";
 
     private static string ToJson<T>(T value) => JsonSerializer.Serialize(value, AltinnApiClient.JsonOptions);
 
@@ -221,7 +222,7 @@ public sealed class AltinnTools
     public static async Task<string> GetRolePackages(
         AltinnApiClient client,
         [Description("The role code, e.g. 'DAGL' (daglig leder), 'REGN' (regnskapsfører)")] string role,
-        [Description("The role variant, e.g. 'altinn', 'er', 'ccr'")] string variant,
+        [Description("The entity variant used for role access, normally 'person'")] string variant,
         [Description("Include resource details in each package")] bool includeResources = false,
         CancellationToken ct = default,
         [Description(EnvDescription)] string environment = AltinnApiClient.DefaultEnvironment)
@@ -234,7 +235,7 @@ public sealed class AltinnTools
     public static async Task<string> GetRoleResources(
         AltinnApiClient client,
         [Description("The role code, e.g. 'DAGL' (daglig leder), 'REGN' (regnskapsfører)")] string role,
-        [Description("The role variant, e.g. 'altinn', 'er', 'ccr'")] string variant,
+        [Description("The entity variant used for role access, normally 'person'")] string variant,
         [Description("Include resources from packages assigned to the role")] bool includePackageResources = false,
         CancellationToken ct = default,
         [Description(EnvDescription)] string environment = AltinnApiClient.DefaultEnvironment)
@@ -429,13 +430,14 @@ public sealed class AltinnTools
                 || Contains(r.LegacyRoleCode, term) || Contains(r.Description, term))
             .Select(r =>
             {
-                var (variant, code) = ParseRoleUrn(r.Urn, r.Code);
+                var (providerVariant, code) = ParseRoleUrn(r.Urn, r.Code);
                 return new
                 {
                     id = r.Id,
                     name = r.Name,
                     code,
-                    variant,
+                    variant = DefaultRoleEntityVariant,
+                    providerVariant,
                     urn = r.Urn,
                     legacyRoleCode = r.LegacyRoleCode,
                     provider = r.Provider?.Name,
@@ -547,10 +549,10 @@ public sealed class AltinnTools
         return partial;
     }
 
-    /// <summary>Derive the (variant, code) used by role lookups from a role URN.
+    /// <summary>Derive the provider variant and role code from a role URN.
     /// urn:altinn:role:tilgangsstyrer → (altinn, tilgangsstyrer);
     /// urn:altinn:external-role:ccr:daglig-leder → (ccr, daglig-leder).</summary>
-    private static (string variant, string code) ParseRoleUrn(string? urn, string? fallbackCode)
+    private static (string providerVariant, string code) ParseRoleUrn(string? urn, string? fallbackCode)
     {
         if (!string.IsNullOrEmpty(urn))
         {
