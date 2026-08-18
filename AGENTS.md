@@ -46,7 +46,7 @@ Full-stack web app for browsing/searching public digital services (Altinn ecosys
   `find_resources`, `find_access_packages`, `find_roles`, `get_resource_access_packages`,
   `get_resource_roles`, `get_access_package_resources`. Lower-level raw tools also exist.
 - Restart/reconnect the MCP server after changing tools (it rebuilds via `dotnet run` on launch).
-- Question-answering skills in `.claude/skills/`: `altinn-catalogue` (router/overview),
+- Question-answering skills in `.Codex/skills/`: `altinn-catalogue` (router/overview),
   `altinn-resource-access`, `altinn-subject-access`, `altinn-access-packages`, `altinn-roles`,
   `altinn-resource-lookup`. Each documents the resolve-name-first recipe and which tools to chain.
 ## Policy Statistics
