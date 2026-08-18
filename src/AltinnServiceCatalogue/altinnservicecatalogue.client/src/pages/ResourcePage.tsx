@@ -380,6 +380,7 @@ export default function ResourcePage() {
       ? `${seBaseUrl}/Pages/ServiceEngine/Start/StartService.aspx?ServiceEditionCode=${serviceEditionRef.reference}&ServiceCode=${serviceCodeRef.reference}`
       : undefined;
 
+  const policyUrl = `${env === 'tt02' ? 'https://platform.tt02.altinn.no' : 'https://platform.altinn.no'}/resourceregistry/api/v1/resource/${encodeURIComponent(id!)}/policy`;
   const resourceTitle = getText(resource.title, lang);
   const resourceDescription = getText(resource.description, lang);
   const ownerName = getText(resource.hasCompetentAuthority?.name, lang);
@@ -425,6 +426,9 @@ export default function ResourcePage() {
           </div>
 
           <div className="resource-header-actions">
+            <a className="resource-link-button secondary" href={policyUrl} target="_blank" rel="noopener noreferrer">
+              <span aria-hidden="true">↓</span> {t('resource.downloadPolicy')}
+            </a>
             {isAltinnAppMigratedFromA2 && (
               <span className="resource-link-button disabled">⛔ {t('resource.goToApp')}</span>
             )}

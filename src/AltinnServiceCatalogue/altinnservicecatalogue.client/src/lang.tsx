@@ -101,6 +101,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'resource.actionsUnknown': { nb: 'handlinger ukjent', en: 'actions unknown' },
   'resource.goToApp': { nb: 'Gå til app', en: 'Go to app' },
   'resource.studioRepo': { nb: 'Kildekode i Altinn Studio', en: 'Source in Altinn Studio' },
+  'resource.downloadPolicy': { nb: 'Last ned policy', en: 'Download policy' },
 
   // Alerts
   'resource.alert.noPackages': {
