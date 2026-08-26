@@ -97,6 +97,82 @@ interface SubjectActions {
   actionsUnknown?: boolean;
 }
 
+type MissingPackagesGuidanceKind = 'app' | 'resourceAdmin' | 'migrated';
+
+function MissingAccessPackagesGuidance({
+  kind,
+  roleNames,
+  studioRepoUrl,
+  resourceAdminUrl,
+  lang,
+  t,
+}: {
+  kind: MissingPackagesGuidanceKind;
+  roleNames: string[];
+  studioRepoUrl?: string;
+  resourceAdminUrl?: string;
+  lang: 'nb' | 'en';
+  t: (key: string) => string;
+}) {
+  const primaryUrl = kind === 'app' ? studioRepoUrl : resourceAdminUrl;
+  const primaryLabel = kind === 'app'
+    ? t('resource.remediation.openAppRepo')
+    : t('resource.remediation.openResourceAdmin');
+  const docsUrl = kind === 'app'
+    ? 'https://docs.altinn.studio/' + lang + '/altinn-studio/v8/reference/configuration/authorization/'
+    : kind === 'migrated'
+      ? 'https://docs.altinn.studio/' + lang + '/authorization/what-do-you-get/resourceadministration/studio/'
+      : 'https://docs.altinn.studio/' + lang + '/authorization/guides/resource-owner/create-resource-resource-admin/';
+
+  return (
+    <section className="resource-remediation" aria-labelledby="resource-remediation-heading">
+      <span className="resource-remediation-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
+          <path d="m13.5 6.5 4 4" />
+        </svg>
+      </span>
+      <div className="resource-remediation-content">
+        <span className="eyebrow">{t('resource.remediation.heading')}</span>
+        <h2 id="resource-remediation-heading">{t('resource.remediation.' + kind + '.title')}</h2>
+        <p className="resource-remediation-intro">{t('resource.remediation.' + kind + '.intro')}</p>
+
+        {roleNames.length > 0 && (
+          <div className="resource-remediation-roles">
+            <strong>{t('resource.remediation.roles')}</strong>
+            <span>{roleNames.join(', ')}</span>
+          </div>
+        )}
+
+        <ol>
+          {[1, 2, 3, 4].map((step) => (
+            <li key={step}>{t('resource.remediation.' + kind + '.step' + step)}</li>
+          ))}
+        </ol>
+
+        <p className="resource-remediation-note">{t('resource.remediation.roleNote')}</p>
+
+        <div className="resource-remediation-actions">
+          {primaryUrl && (
+            <a className="resource-link-button primary" href={primaryUrl} target="_blank" rel="noopener noreferrer">
+              {primaryLabel} <span aria-hidden="true">&nearr;</span>
+            </a>
+          )}
+          <Link className="resource-link-button secondary" to="/packages">
+            {t('resource.remediation.findPackage')}
+          </Link>
+          <a className="resource-remediation-text-link" href="#resource-access-rights">
+            {t('resource.remediation.reviewRights')}
+          </a>
+          <a className="resource-remediation-text-link" href={docsUrl} target="_blank" rel="noopener noreferrer">
+            {t('resource.remediation.readGuide')} <span aria-hidden="true">&nearr;</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** Group policy rules by subject and collect actions per subject */
 function groupRulesBySubject(rules: PolicyRule[]): SubjectActions[] {
   const map = new Map<string, SubjectActions>();
@@ -350,14 +426,14 @@ export default function ResourcePage() {
 
   const domain = env === 'prod' ? 'altinn.no' : 'tt02.altinn.no';
 
-  // AltinnApp migrated from Altinn 2 — either MigratedApp resource type or AltinnApp with _a2- in identifier
-  const isAltinnAppMigratedFromA2 =
+  // Migrated Altinn 1/2 apps are imported and maintained through Resource Administration.
+  const isMigratedAltinnApp =
     resource.resourceType === 'MigratedApp' ||
-    (resource.resourceType === 'AltinnApp' && resource.identifier.includes('_a2-'));
+    (resource.resourceType === 'AltinnApp' && /_a[12]-/.test(resource.identifier));
 
   // AltinnApp not migrated — build app URL and Studio repo URL from ApplicationId reference
   const appRef =
-    resource.resourceType === 'AltinnApp' && !isAltinnAppMigratedFromA2
+    resource.resourceType === 'AltinnApp' && !isMigratedAltinnApp
       ? resource.resourceReferences?.find((r) => r.referenceType === 'ApplicationId')
       : undefined;
   const appUrl = appRef?.reference
@@ -369,6 +445,22 @@ export default function ResourcePage() {
   const studioRepoUrl = appRef?.reference
     ? `https://altinn.studio/repos/${appRef.reference}`
     : undefined;
+
+  const resourceAdminUrl = orgCode
+    ? 'https://altinn.studio/resourceadm/' + orgCode + '/' + orgCode + '-resources'
+    : undefined;
+  const missingPackagesGuidanceKind: MissingPackagesGuidanceKind | null =
+    isMigratedAltinnApp
+      ? 'migrated'
+      : resource.resourceType === 'AltinnApp'
+        ? 'app'
+        : resource.resourceType === 'Altinn2Service'
+          ? null
+          : 'resourceAdmin';
+  const policyRoleNames = [...new Set(roleSubjects.map((subject) => {
+    const key = subject.type + '::' + subject.value;
+    return roleInfo[key]?.name ?? subject.value;
+  }))];
 
   // Altinn 2 ServiceEngine — identifier starts with se_
   const isServiceEngine = resource.identifier.startsWith('se_');
@@ -429,7 +521,7 @@ export default function ResourcePage() {
             <a className="resource-link-button secondary" href={policyUrl} target="_blank" rel="noopener noreferrer">
               <span aria-hidden="true">↓</span> {t('resource.downloadPolicy')}
             </a>
-            {isAltinnAppMigratedFromA2 && (
+            {isMigratedAltinnApp && (
               <span className="resource-link-button disabled">⛔ {t('resource.goToApp')}</span>
             )}
             {studioRepoUrl && (
@@ -485,7 +577,19 @@ export default function ResourcePage() {
 
       <div className="resource-alerts">
         {!loadingRules && packageSubjects.length === 0 && (
-          <Alert data-color="warning">{t('resource.alert.noPackages')}</Alert>
+          <>
+            <Alert data-color="warning">{t('resource.alert.noPackages')}</Alert>
+            {missingPackagesGuidanceKind && (
+              <MissingAccessPackagesGuidance
+                kind={missingPackagesGuidanceKind}
+                roleNames={policyRoleNames}
+                studioRepoUrl={studioRepoUrl}
+                resourceAdminUrl={resourceAdminUrl}
+                lang={lang}
+                t={t}
+              />
+            )}
+          </>
         )}
         {resource.accessListMode === 'Enabled' && (
           <Alert data-color="info">{t('resource.alert.accessList')}</Alert>
@@ -501,7 +605,7 @@ export default function ResourcePage() {
             </section>
           )}
 
-          <section className="resource-panel resource-access-panel">
+          <section className="resource-panel resource-access-panel" id="resource-access-rights">
             <header className="resource-panel-header">
               <div>
                 <h2>{t('resource.accessRights')}</h2>

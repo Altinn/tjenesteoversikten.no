@@ -105,12 +105,100 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // Alerts
   'resource.alert.noPackages': {
-    nb: 'Tjenesten er ikke definert med tilgangspakker. Dette gjør at systembrukere har begrenset tilgang til disse tjenestene. Det betyr også at vanlige brukere med roller vil miste tilgang etter 01.01.2027 når rollene fjernes fra Altinn.',
-    en: 'This service is not defined with access packages. This means system users have limited access to these services. It also means that regular users with roles will lose access after 01.01.2027 when the roles are removed from Altinn.',
+    nb: 'Tjenesten er ikke koblet til noen tilgangspakke. Det begrenser tilgangen for systembrukere og gjør at tjenesten ikke kan delegeres som del av en pakke. Tilgang som bare er delegert gjennom Altinn 2-roller kan falle bort når disse rollene fjernes 1. januar 2027. ER-roller fjernes ikke og trenger ikke erstattes med en pakke.',
+    en: 'This service is not connected to an access package. This limits access for system users and means the service cannot be delegated as part of a package. Access delegated only through Altinn 2 roles may be lost when those roles are removed on 1 January 2027. ER roles are not removed and do not need to be replaced by a package.',
   },
   'resource.alert.accessList': {
     nb: 'Tjenesten har aktivert tilgangsliste. Dette betyr at tjenesteeier har definert et begrenset sett med virksomheter som har tilgang.',
     en: 'This service has access list enabled. This means the service owner has defined a limited set of organizations that have access.',
+  },
+
+  // Guidance for services without access packages
+  'resource.remediation.heading': { nb: 'Slik retter dere dette', en: 'How to fix this' },
+  'resource.remediation.roles': { nb: 'Roller i dagens policy', en: 'Roles in the current policy' },
+  'resource.remediation.roleNote': {
+    nb: 'ER-roller, for eksempel DAGL og REGN, trenger ikke erstattes. Behold dem der de gir tilsiktet tilgang. Legg eventuelt til en tilgangspakke som et ekstra subjekt hvis tjenesten også skal kunne delegeres gjennom pakken eller brukes av systembrukere. Andre Altinn 2-roller må erstattes eller suppleres før de fjernes.',
+    en: 'ER roles, such as DAGL and REGN, do not need to be replaced. Keep them where they provide the intended access. Optionally add an access package as an additional subject if the service should also be delegable through the package or available to system users. Other Altinn 2 roles must be replaced or supplemented before they are removed.',
+  },
+  'resource.remediation.openAppRepo': { nb: 'Åpne app-repoet', en: 'Open app repository' },
+  'resource.remediation.openResourceAdmin': { nb: 'Åpne Ressursadministrasjon', en: 'Open Resource Administration' },
+  'resource.remediation.findPackage': { nb: 'Finn riktig tilgangspakke', en: 'Find the right access package' },
+  'resource.remediation.reviewRights': { nb: 'Se roller og rettigheter nedenfor', en: 'Review roles and rights below' },
+  'resource.remediation.readGuide': { nb: 'Les Altinn-veiledningen', en: 'Read the Altinn guide' },
+
+  'resource.remediation.app.title': {
+    nb: 'Oppdater autorisasjonspolicyen i app-repoet',
+    en: 'Update the authorization policy in the app repository',
+  },
+  'resource.remediation.app.intro': {
+    nb: 'Dette er en Altinn-app. Autorisasjonsreglene forvaltes i appens repo i Altinn Studio.',
+    en: 'This is an Altinn app. Its authorization rules are managed in the app repository in Altinn Studio.',
+  },
+  'resource.remediation.app.step1': {
+    nb: 'Åpne app-repoet og finn policy.xml under App/config/authorization.',
+    en: 'Open the app repository and locate policy.xml under App/config/authorization.',
+  },
+  'resource.remediation.app.step2': {
+    nb: 'Gå gjennom rollene og handlingene i hver regel. Avklar hvem som skal kunne utføre handlingene i hvert prosessteg.',
+    en: 'Review the roles and actions in every rule. Confirm who should be able to perform each action at every process step.',
+  },
+  'resource.remediation.app.step3': {
+    nb: 'Vurder om ER-rollene fortsatt skal gi tilgang. Finn en passende tilgangspakke hvis appen i tillegg skal kunne delegeres gjennom en pakke eller brukes av systembrukere.',
+    en: 'Assess whether the ER roles should continue to grant access. Find a suitable access package if the app should also be delegable through a package or available to system users.',
+  },
+  'resource.remediation.app.step4': {
+    nb: 'Behold tilsiktede ER-roller, og legg pakken til som et ekstra subjekt i alle regler der pakketilgang skal gi de aktuelle handlingene. Kontroller hele policyen, test i TT02 og deploy deretter til produksjon.',
+    en: 'Keep the intended ER roles, and add the package as an additional subject to every rule where package access should grant the relevant actions. Review the entire policy, test in TT02, and then deploy to production.',
+  },
+
+  'resource.remediation.resourceAdmin.title': {
+    nb: 'Oppdater policyen i Ressursadministrasjon',
+    en: 'Update the policy in Resource Administration',
+  },
+  'resource.remediation.resourceAdmin.intro': {
+    nb: 'Dette er en ressurs eller meldingstjeneste som forvaltes i Altinn Studio Ressursadministrasjon.',
+    en: 'This is a resource or messaging service managed through Altinn Studio Resource Administration.',
+  },
+  'resource.remediation.resourceAdmin.step1': {
+    nb: 'Åpne organisasjonens ressursoversikt og velg denne ressursen.',
+    en: 'Open the organization resource dashboard and select this resource.',
+  },
+  'resource.remediation.resourceAdmin.step2': {
+    nb: 'Åpne policyen og gå gjennom rollene og handlingene i hver regel.',
+    en: 'Open the policy and review the roles and actions in every rule.',
+  },
+  'resource.remediation.resourceAdmin.step3': {
+    nb: 'Behold tilsiktede ER-roller. Finn en passende tilgangspakke, og legg den til som et ekstra subjekt i alle regler der tjenesten også skal kunne delegeres gjennom pakken.',
+    en: 'Keep the intended ER roles. Find a suitable access package and add it as an additional subject to every rule where the service should also be delegable through the package.',
+  },
+  'resource.remediation.resourceAdmin.step4': {
+    nb: 'Lagre og commit endringen, øk versjons-ID-en og publiser først til TT02 for testing, deretter til produksjon.',
+    en: 'Save and commit the change, increment the version ID, and publish to TT02 for testing before publishing to production.',
+  },
+
+  'resource.remediation.migrated.title': {
+    nb: 'Importer den migrerte appen før policyen oppdateres',
+    en: 'Import the migrated app before updating its policy',
+  },
+  'resource.remediation.migrated.intro': {
+    nb: 'Dette er en migrert Altinn 1- eller Altinn 2-app. Den må først importeres fra Ressursregisteret til Ressursadministrasjon i Altinn Studio.',
+    en: 'This is a migrated Altinn 1 or Altinn 2 app. It must first be imported from the Resource Registry into Resource Administration in Altinn Studio.',
+  },
+  'resource.remediation.migrated.step1': {
+    nb: 'Åpne Ressursadministrasjon, finn tjenesten i ressursoversikten og velg Importer.',
+    en: 'Open Resource Administration, find the service in the resource dashboard, and select Import.',
+  },
+  'resource.remediation.migrated.step2': {
+    nb: 'Etter import åpner du policyen og går gjennom rollene og handlingene i hver regel.',
+    en: 'After the import, open the policy and review the roles and actions in every rule.',
+  },
+  'resource.remediation.migrated.step3': {
+    nb: 'Behold tilsiktede ER-roller. Finn en passende tilgangspakke, og legg den til som et ekstra subjekt i alle regler der appen også skal kunne delegeres gjennom pakken.',
+    en: 'Keep the intended ER roles. Find a suitable access package and add it as an additional subject to every rule where the app should also be delegable through the package.',
+  },
+  'resource.remediation.migrated.step4': {
+    nb: 'Lagre og commit endringen, øk versjons-ID-en og publiser først til TT02 for testing, deretter til produksjon.',
+    en: 'Save and commit the change, increment the version ID, and publish to TT02 for testing before publishing to production.',
   },
 
   // Security level
