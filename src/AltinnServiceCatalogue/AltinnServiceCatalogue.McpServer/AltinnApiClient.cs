@@ -84,11 +84,28 @@ public class AltinnApiClient
                 includeAltinn2: true,
                 normalizedEnvironment,
                 ct);
+            var roles = await GetRolesAsync(normalizedEnvironment, ct);
+            var erLegacyRoleCodes = roles
+                .Where(static role => !string.IsNullOrWhiteSpace(role.LegacyRoleCode)
+                    && (string.Equals(role.Provider?.Code, "sys-ccr", StringComparison.OrdinalIgnoreCase)
+                        || role.Urn?.StartsWith(
+                            "urn:altinn:external-role:ccr:",
+                            StringComparison.OrdinalIgnoreCase) == true))
+                .Select(static role => role.LegacyRoleCode)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var result = await PolicyStatisticsScanner.ScanAsync(
                 normalizedEnvironment,
-                resources.Select(static resource => resource.Identifier ?? string.Empty),
+                resources.Select(static resource => new PolicyResourceMetadataDto(
+                    resource.Identifier ?? string.Empty,
+                    resource.Title ?? new Dictionary<string, string>(),
+                    resource.HasCompetentAuthority?.Orgcode
+                        ?? resource.HasCompetentAuthority?.Organization
+                        ?? string.Empty,
+                    resource.HasCompetentAuthority?.Name ?? new Dictionary<string, string>(),
+                    resource.ResourceType.ToString())),
                 (id, token) => GetResourcePolicyStreamAsync(id, normalizedEnvironment, token),
-                ct);
+                ct,
+                erLegacyRoleCodes: erLegacyRoleCodes);
 
             _policyStatisticsCache[normalizedEnvironment] = new CachedPolicyStatistics(
                 DateTimeOffset.UtcNow.Add(PolicyStatisticsCacheDuration),

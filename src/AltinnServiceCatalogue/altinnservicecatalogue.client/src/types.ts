@@ -333,6 +333,24 @@ export interface PolicyResourceStatistics {
   usesPolicyCombiningAlgorithmInRuleSlot: boolean;
   wouldLegacyPdpEvaluateIncorrectly: boolean;
 }
+export interface PolicyAltinn2RoleOnlyResource {
+  resourceId: string;
+  title: Record<string, string>;
+  ownerId: string;
+  ownerName: Record<string, string>;
+  resourceType: string;
+  altinn2RoleCodes: string[];
+  erRoleCodes: string[];
+  otherAltinn2RoleCodes: string[];
+}
+
+export interface PolicyAltinn2RoleOnlyGroup {
+  ownerId: string;
+  ownerName: Record<string, string>;
+  resourceType: string;
+  resourceCount: number;
+  resources: PolicyAltinn2RoleOnlyResource[];
+}
 
 export interface PolicyStatistics {
   environment: string;
@@ -355,4 +373,8 @@ export interface PolicyStatistics {
   nonDefaultResourceCount: number;
   nonDefaultResourcesCapped: boolean;
   nonDefaultResources: PolicyResourceStatistics[];
+  altinn2RoleOnlyResourceCount: number;
+  altinn2RoleOnlyWithErRolesCount: number;
+  altinn2RoleOnlyWithoutErRolesCount: number;
+  altinn2RoleOnlyGroups: PolicyAltinn2RoleOnlyGroup[];
 }

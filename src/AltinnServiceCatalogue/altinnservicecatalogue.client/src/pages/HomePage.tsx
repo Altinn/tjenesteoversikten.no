@@ -218,6 +218,17 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
     fetchFailures: 'hentefeil',
     parseFailures: 'tolkefeil',
     duration: 'skannetid',
+    migrationTitle: 'Tjenester uten tilgangspakker',
+    migrationDescription: 'Tjenester med legacy rollekoder i policyen, men ingen tilgangspakker. Rene Altinn 2-tjenester er ikke med.',
+    migrationResources: 'tjenester',
+    migrationGroups: 'eier-/typegrupper',
+    withoutErTitle: 'Bare Altinn 2-roller – uten ER-roller',
+    withoutErDescription: 'Disse tjenestene har ingen ER-rolle som kan videreføre tilgangen når delegerte Altinn 2-roller slettes 1. januar 2027, og er derfor den viktigste oppfølgingslisten for tilgangspakker.',
+    withErTitle: 'Altinn 2-roller med ER-roller',
+    withErDescription: 'Disse tjenestene har minst én ER-rolle, for eksempel DAGL eller REGN, og trenger derfor ikke nødvendigvis tilgangspakker før 1. januar 2027. Tilganger som bare følger av øvrige Altinn 2-roller må fortsatt vurderes.',
+    erRoles: 'ER-roller',
+    otherAltinn2Roles: 'Andre Altinn 2-roller',
+    unknownOwner: 'Ukjent tjenesteeier',
     drilldown: 'Policyer med ikke-standard algoritme',
     capped: 'Listen er begrenset',
     of: 'av',
@@ -242,6 +253,17 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
     fetchFailures: 'fetch failures',
     parseFailures: 'parse failures',
     duration: 'scan duration',
+    migrationTitle: 'Services without access packages',
+    migrationDescription: 'Services with legacy role codes in the policy, but no access packages. Pure Altinn 2 services are excluded.',
+    migrationResources: 'services',
+    migrationGroups: 'owner/type groups',
+    withoutErTitle: 'Altinn 2 roles only – no ER roles',
+    withoutErDescription: 'These services have no ER role that can retain access when delegated Altinn 2 roles are removed on 1 January 2027, making them the highest-priority list for access packages.',
+    withErTitle: 'Altinn 2 roles with ER roles',
+    withErDescription: 'These services have at least one ER role, such as DAGL or REGN, and therefore do not necessarily need access packages before 1 January 2027. Access granted only through other Altinn 2 roles must still be assessed.',
+    erRoles: 'ER roles',
+    otherAltinn2Roles: 'Other Altinn 2 roles',
+    unknownOwner: 'Unknown service owner',
     drilldown: 'Policies with non-default algorithms',
     capped: 'The list is capped',
     of: 'of',
@@ -285,6 +307,33 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
     [text.conditions, statistics.policiesWithConditions, '#4098E8'],
     [text.legacy, statistics.legacyIncorrectEvaluationCount, '#C23B53'],
   ];
+  const altinn2RoleOnlyGroups = [...(statistics.altinn2RoleOnlyGroups ?? [])].sort((left, right) => {
+    const leftOwner = getText(left.ownerName, lang) || left.ownerId;
+    const rightOwner = getText(right.ownerName, lang) || right.ownerId;
+    return leftOwner.localeCompare(rightOwner, lang) || left.resourceType.localeCompare(right.resourceType, lang);
+  });
+  const groupsByErPresence = (hasErRoles: boolean) => altinn2RoleOnlyGroups
+    .map((group) => {
+      const resources = group.resources.filter((resource) => (resource.erRoleCodes.length > 0) === hasErRoles);
+      return { ...group, resourceCount: resources.length, resources };
+    })
+    .filter((group) => group.resourceCount > 0);
+  const roleCategories = [
+    {
+      key: 'without-er',
+      title: text.withoutErTitle,
+      description: text.withoutErDescription,
+      count: statistics.altinn2RoleOnlyWithoutErRolesCount,
+      groups: groupsByErPresence(false),
+    },
+    {
+      key: 'with-er',
+      title: text.withErTitle,
+      description: text.withErDescription,
+      count: statistics.altinn2RoleOnlyWithErRolesCount,
+      groups: groupsByErPresence(true),
+    },
+  ];
 
   return <section aria-labelledby="policy-statistics-title">
     <h2 id="policy-statistics-title">{text.title}</h2>
@@ -306,6 +355,35 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
         <span>{format(statistics.scanDurationMilliseconds)} ms {text.duration}</span>
       </div>
     </article>
+    <h3 id="altinn2-role-only-title">{text.migrationTitle}</h3>
+    <p className="statistics-description">{text.migrationDescription}</p>
+    <div className="results-count">{format(statistics.altinn2RoleOnlyResourceCount)} {text.migrationResources}</div>
+    <div className="role-category-list">{roleCategories.map((category) => <section className="role-category-section" data-category={category.key} aria-labelledby={`role-category-${category.key}`} key={category.key}>
+      <header className="role-category-header">
+        <div><h4 id={`role-category-${category.key}`}>{category.title}</h4><p>{category.description}</p></div>
+        <strong>{format(category.count)}</strong>
+      </header>
+      <div className="results-count">{format(category.count)} {text.migrationResources} · {format(category.groups.length)} {text.migrationGroups}</div>
+      <div className="statistics-group-list">{category.groups.map((group) => {
+        const ownerName = getText(group.ownerName, lang) || group.ownerId || text.unknownOwner;
+        return <details key={`${category.key}:${group.ownerId}:${group.resourceType}`}>
+          <summary>
+            <span className="statistics-group-owner"><strong>{ownerName}</strong>{group.ownerId && <small>{group.ownerId}</small>}</span>
+            <span className={`type-chip type-${group.resourceType}`}>{group.resourceType}</span>
+            <strong className="statistics-group-count">{format(group.resourceCount)}</strong>
+          </summary>
+          <div className="result-list">{group.resources.map((resource) => <Link to={`/resource/${encodeURIComponent(resource.resourceId)}`} key={resource.resourceId}>
+            <span className="type-chip">{resource.erRoleCodes.length > 0 ? 'ER/A2' : 'A2'}</span>
+            <div><strong>{getText(resource.title, lang) || resource.resourceId}</strong><p>{resource.resourceId}</p></div>
+            <small className="role-breakdown">
+              {resource.erRoleCodes.length > 0 && <span><b>{text.erRoles}:</b> {resource.erRoleCodes.join(', ')}</span>}
+              {resource.otherAltinn2RoleCodes.length > 0 && <span><b>{text.otherAltinn2Roles}:</b> {resource.otherAltinn2RoleCodes.join(', ')}</span>}
+            </small>
+            <span className="chevron">›</span>
+          </Link>)}</div>
+        </details>;
+      })}</div>
+    </section>)}</div>
     <h3>{text.drilldown}</h3>
     <div className="results-count">
       {format(statistics.nonDefaultResources.length)} {text.of} {format(statistics.nonDefaultResourceCount)}

@@ -1,6 +1,30 @@
 namespace AltinnServiceCatalogue.PolicyStatistics;
 
+public sealed record PolicyResourceMetadataDto(
+    string ResourceId,
+    IReadOnlyDictionary<string, string> Title,
+    string OwnerId,
+    IReadOnlyDictionary<string, string> OwnerName,
+    string ResourceType);
+
 public sealed record PolicyAlgorithmUsageDto(string Algorithm, string Kind, int Count);
+
+public sealed record PolicyAltinn2RoleOnlyResourceDto(
+    string ResourceId,
+    IReadOnlyDictionary<string, string> Title,
+    string OwnerId,
+    IReadOnlyDictionary<string, string> OwnerName,
+    string ResourceType,
+    IReadOnlyList<string> Altinn2RoleCodes,
+    IReadOnlyList<string> ErRoleCodes,
+    IReadOnlyList<string> OtherAltinn2RoleCodes);
+
+public sealed record PolicyAltinn2RoleOnlyGroupDto(
+    string OwnerId,
+    IReadOnlyDictionary<string, string> OwnerName,
+    string ResourceType,
+    int ResourceCount,
+    IReadOnlyList<PolicyAltinn2RoleOnlyResourceDto> Resources);
 
 public sealed record PolicyResourceStatisticsDto(
     string ResourceId,
@@ -33,4 +57,8 @@ public sealed record PolicyStatisticsDto(
     IReadOnlyList<PolicyAlgorithmUsageDto> AlgorithmUsage,
     int NonDefaultResourceCount,
     bool NonDefaultResourcesCapped,
-    IReadOnlyList<PolicyResourceStatisticsDto> NonDefaultResources);
+    IReadOnlyList<PolicyResourceStatisticsDto> NonDefaultResources,
+    int Altinn2RoleOnlyResourceCount,
+    int Altinn2RoleOnlyWithErRolesCount,
+    int Altinn2RoleOnlyWithoutErRolesCount,
+    IReadOnlyList<PolicyAltinn2RoleOnlyGroupDto> Altinn2RoleOnlyGroups);
