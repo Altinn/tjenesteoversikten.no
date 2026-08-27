@@ -116,24 +116,22 @@ type MissingPackagesGuidanceKind = 'app' | 'resourceAdmin' | 'migrated';
 function MissingAccessPackagesGuidance({
   kind,
   roleNames,
-  studioRepoUrl,
   resourceAdminUrl,
   lang,
   t,
 }: {
   kind: MissingPackagesGuidanceKind;
   roleNames: string[];
-  studioRepoUrl?: string;
   resourceAdminUrl?: string;
   lang: 'nb' | 'en';
   t: (key: string) => string;
 }) {
-  const primaryUrl = kind === 'app' ? studioRepoUrl : resourceAdminUrl;
+  const primaryUrl = kind === 'app' ? 'https://altinn.studio/' : resourceAdminUrl;
   const primaryLabel = kind === 'app'
-    ? t('resource.remediation.openAppRepo')
+    ? t('resource.remediation.openAppInStudio')
     : t('resource.remediation.openResourceAdmin');
   const docsUrl = kind === 'app'
-    ? 'https://docs.altinn.studio/' + lang + '/altinn-studio/v8/reference/configuration/authorization/'
+    ? 'https://docs.altinn.studio/' + lang + '/altinn-studio/v8/designer/build-app/authorization-rules/'
     : kind === 'migrated'
       ? 'https://docs.altinn.studio/' + lang + '/authorization/what-do-you-get/resourceadministration/studio/'
       : 'https://docs.altinn.studio/' + lang + '/authorization/guides/resource-owner/create-resource-resource-admin/';
@@ -603,7 +601,6 @@ export default function ResourcePage() {
               <MissingAccessPackagesGuidance
                 kind={missingPackagesGuidanceKind}
                 roleNames={policyRoleNames}
-                studioRepoUrl={studioRepoUrl}
                 resourceAdminUrl={resourceAdminUrl}
                 lang={lang}
                 t={t}
