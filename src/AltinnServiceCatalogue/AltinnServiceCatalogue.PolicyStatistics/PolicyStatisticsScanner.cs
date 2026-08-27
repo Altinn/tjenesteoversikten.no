@@ -16,6 +16,12 @@ public static class PolicyStatisticsScanner
     private const string AccessPackageAttributeId = "urn:altinn:accesspackage";
     private const string Altinn2RoleAttributeId = "urn:altinn:rolecode";
     private const string Altinn2ServiceResourceType = "Altinn2Service";
+    private static readonly HashSet<string> PersistentSelfRepresentationRoleCodes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "PRIV",
+            "SELN"
+        };
 
     public static Task<PolicyStatisticsDto> ScanAsync(
         string environment,
@@ -106,11 +112,16 @@ public static class PolicyStatisticsScanner
                         var altinn2RoleCodes = ExtractSubjectValues(document, Altinn2RoleAttributeId)
                             .Select(static code => code.ToUpperInvariant())
                             .ToArray();
-                        var erRoleCodes = altinn2RoleCodes
+                        var migrationRelevantRoleCodes = altinn2RoleCodes
+                            .Where(static code => !PersistentSelfRepresentationRoleCodes.Contains(code))
+                            .ToArray();
+                        var erRoleCodes = migrationRelevantRoleCodes
                             .Where(code => erLegacyRoleCodes?.Contains(code) == true)
                             .ToArray();
-                        var otherAltinn2RoleCodes = altinn2RoleCodes.Except(erRoleCodes, StringComparer.OrdinalIgnoreCase).ToArray();
-                        var altinn2RoleOnlyResource = altinn2RoleCodes.Length > 0
+                        var otherAltinn2RoleCodes = migrationRelevantRoleCodes
+                            .Except(erRoleCodes, StringComparer.OrdinalIgnoreCase)
+                            .ToArray();
+                        var altinn2RoleOnlyResource = migrationRelevantRoleCodes.Length > 0
                             && accessPackageValues.Length == 0
                             && !string.Equals(resource.ResourceType, Altinn2ServiceResourceType, StringComparison.OrdinalIgnoreCase)
                                 ? new PolicyAltinn2RoleOnlyResourceDto(
@@ -119,7 +130,7 @@ public static class PolicyStatisticsScanner
                                     resource.OwnerId,
                                     resource.OwnerName,
                                     resource.ResourceType,
-                                    altinn2RoleCodes,
+                                    migrationRelevantRoleCodes,
                                     erRoleCodes,
                                     otherAltinn2RoleCodes)
                                 : null;

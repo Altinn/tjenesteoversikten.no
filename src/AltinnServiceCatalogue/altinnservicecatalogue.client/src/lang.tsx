@@ -120,35 +120,35 @@ const translations: Record<string, Record<Lang, string>> = {
     nb: 'ER-roller, for eksempel DAGL og REGN, trenger ikke erstattes. Behold dem der de gir tilsiktet tilgang. Legg eventuelt til en tilgangspakke som et ekstra subjekt hvis tjenesten også skal kunne delegeres gjennom pakken eller brukes av systembrukere. Andre Altinn 2-roller må erstattes eller suppleres før de fjernes.',
     en: 'ER roles, such as DAGL and REGN, do not need to be replaced. Keep them where they provide the intended access. Optionally add an access package as an additional subject if the service should also be delegable through the package or available to system users. Other Altinn 2 roles must be replaced or supplemented before they are removed.',
   },
-  'resource.remediation.openAppRepo': { nb: 'Åpne app-repoet', en: 'Open app repository' },
+  'resource.remediation.openAppInStudio': { nb: 'Åpne appen i Altinn Studio', en: 'Open the app in Altinn Studio' },
   'resource.remediation.openResourceAdmin': { nb: 'Åpne Ressursadministrasjon', en: 'Open Resource Administration' },
   'resource.remediation.findPackage': { nb: 'Finn riktig tilgangspakke', en: 'Find the right access package' },
   'resource.remediation.reviewRights': { nb: 'Se roller og rettigheter nedenfor', en: 'Review roles and rights below' },
   'resource.remediation.readGuide': { nb: 'Les Altinn-veiledningen', en: 'Read the Altinn guide' },
 
   'resource.remediation.app.title': {
-    nb: 'Oppdater autorisasjonspolicyen i app-repoet',
-    en: 'Update the authorization policy in the app repository',
+    nb: 'Oppdater autorisasjonspolicyen med Policy Editor',
+    en: 'Update the authorization policy with Policy Editor',
   },
   'resource.remediation.app.intro': {
-    nb: 'Dette er en Altinn-app. Autorisasjonsreglene forvaltes i appens repo i Altinn Studio.',
-    en: 'This is an Altinn app. Its authorization rules are managed in the app repository in Altinn Studio.',
+    nb: 'Dette er en Altinn-app. Policyen lagres i app-repoet, men bør normalt endres med Policy Editor i Altinn Studio – ikke ved å redigere policy.xml manuelt.',
+    en: 'This is an Altinn app. The policy is stored in the app repository, but should normally be changed with Policy Editor in Altinn Studio rather than by editing policy.xml manually.',
   },
   'resource.remediation.app.step1': {
-    nb: 'Åpne app-repoet og finn policy.xml under App/config/authorization.',
-    en: 'Open the app repository and locate policy.xml under App/config/authorization.',
+    nb: 'Åpne appen fra dashboardet i Altinn Studio og velg Lage → Tilgangsstyring (Policy Editor).',
+    en: 'Open the app from the Altinn Studio dashboard and select Build → Access control (Policy Editor).',
   },
   'resource.remediation.app.step2': {
-    nb: 'Gå gjennom rollene og handlingene i hver regel. Avklar hvem som skal kunne utføre handlingene i hvert prosessteg.',
-    en: 'Review the roles and actions in every rule. Confirm who should be able to perform each action at every process step.',
+    nb: 'Gå gjennom rollene og handlingene i hver regel i editoren. Avklar hvem som skal kunne utføre handlingene i hvert prosessteg.',
+    en: 'Review the roles and actions in every rule in the editor. Confirm who should be able to perform each action at every process step.',
   },
   'resource.remediation.app.step3': {
     nb: 'Vurder om ER-rollene fortsatt skal gi tilgang. Finn en passende tilgangspakke hvis appen i tillegg skal kunne delegeres gjennom en pakke eller brukes av systembrukere.',
     en: 'Assess whether the ER roles should continue to grant access. Find a suitable access package if the app should also be delegable through a package or available to system users.',
   },
   'resource.remediation.app.step4': {
-    nb: 'Behold tilsiktede ER-roller, og legg pakken til som et ekstra subjekt i alle regler der pakketilgang skal gi de aktuelle handlingene. Kontroller hele policyen, test i TT02 og deploy deretter til produksjon.',
-    en: 'Keep the intended ER roles, and add the package as an additional subject to every rule where package access should grant the relevant actions. Review the entire policy, test in TT02, and then deploy to production.',
+    nb: 'Bruk Policy Editor til å beholde tilsiktede ER-roller og legge pakken til i alle regler der pakketilgang skal gi de aktuelle handlingene. Kontroller hele policyen, test i TT02 og deploy deretter til produksjon.',
+    en: 'Use Policy Editor to keep the intended ER roles and add the package to every rule where package access should grant the relevant actions. Review the entire policy, test in TT02, and then deploy to production.',
   },
 
   'resource.remediation.resourceAdmin.title': {

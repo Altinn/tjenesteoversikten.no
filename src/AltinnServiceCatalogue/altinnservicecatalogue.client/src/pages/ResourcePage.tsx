@@ -97,29 +97,41 @@ interface SubjectActions {
   actionsUnknown?: boolean;
 }
 
+const PERSISTENT_SELF_REPRESENTATION_ROLE_CODES = new Set(['PRIV', 'SELN']);
+const PERSISTENT_SELF_REPRESENTATION_ROLES = new Set(['privatperson', 'selvregistrert']);
+
+function isPersistentSelfRepresentationRole(subject: SubjectActions): boolean {
+  const subjectType = subject.type.toLowerCase();
+  if (subjectType === 'urn:altinn:rolecode') {
+    return PERSISTENT_SELF_REPRESENTATION_ROLE_CODES.has(subject.value.trim().toUpperCase());
+  }
+  if (subjectType === 'urn:altinn:role') {
+    return PERSISTENT_SELF_REPRESENTATION_ROLES.has(subject.value.trim().toLowerCase().split(':').at(-1) ?? '');
+  }
+  return false;
+}
+
 type MissingPackagesGuidanceKind = 'app' | 'resourceAdmin' | 'migrated';
 
 function MissingAccessPackagesGuidance({
   kind,
   roleNames,
-  studioRepoUrl,
   resourceAdminUrl,
   lang,
   t,
 }: {
   kind: MissingPackagesGuidanceKind;
   roleNames: string[];
-  studioRepoUrl?: string;
   resourceAdminUrl?: string;
   lang: 'nb' | 'en';
   t: (key: string) => string;
 }) {
-  const primaryUrl = kind === 'app' ? studioRepoUrl : resourceAdminUrl;
+  const primaryUrl = kind === 'app' ? 'https://altinn.studio/' : resourceAdminUrl;
   const primaryLabel = kind === 'app'
-    ? t('resource.remediation.openAppRepo')
+    ? t('resource.remediation.openAppInStudio')
     : t('resource.remediation.openResourceAdmin');
   const docsUrl = kind === 'app'
-    ? 'https://docs.altinn.studio/' + lang + '/altinn-studio/v8/reference/configuration/authorization/'
+    ? 'https://docs.altinn.studio/' + lang + '/altinn-studio/v8/designer/build-app/authorization-rules/'
     : kind === 'migrated'
       ? 'https://docs.altinn.studio/' + lang + '/authorization/what-do-you-get/resourceadministration/studio/'
       : 'https://docs.altinn.studio/' + lang + '/authorization/guides/resource-owner/create-resource-resource-admin/';
@@ -461,6 +473,12 @@ export default function ResourcePage() {
     const key = subject.type + '::' + subject.value;
     return roleInfo[key]?.name ?? subject.value;
   }))];
+  const hasOnlyPersistentSelfRepresentationRoles =
+    roleSubjects.length > 0 && roleSubjects.every(isPersistentSelfRepresentationRole);
+  const shouldFlagMissingAccessPackages =
+    !loadingRules &&
+    packageSubjects.length === 0 &&
+    !hasOnlyPersistentSelfRepresentationRoles;
 
   // Altinn 2 ServiceEngine — identifier starts with se_
   const isServiceEngine = resource.identifier.startsWith('se_');
@@ -576,14 +594,13 @@ export default function ResourcePage() {
       </section>
 
       <div className="resource-alerts">
-        {!loadingRules && packageSubjects.length === 0 && (
+        {shouldFlagMissingAccessPackages && (
           <>
             <Alert data-color="warning">{t('resource.alert.noPackages')}</Alert>
             {missingPackagesGuidanceKind && (
               <MissingAccessPackagesGuidance
                 kind={missingPackagesGuidanceKind}
                 roleNames={policyRoleNames}
-                studioRepoUrl={studioRepoUrl}
                 resourceAdminUrl={resourceAdminUrl}
                 lang={lang}
                 t={t}
