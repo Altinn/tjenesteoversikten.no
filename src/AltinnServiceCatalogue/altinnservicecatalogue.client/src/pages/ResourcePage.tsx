@@ -97,6 +97,20 @@ interface SubjectActions {
   actionsUnknown?: boolean;
 }
 
+const PERSISTENT_SELF_REPRESENTATION_ROLE_CODES = new Set(['PRIV', 'SELN']);
+const PERSISTENT_SELF_REPRESENTATION_ROLES = new Set(['privatperson', 'selvregistrert']);
+
+function isPersistentSelfRepresentationRole(subject: SubjectActions): boolean {
+  const subjectType = subject.type.toLowerCase();
+  if (subjectType === 'urn:altinn:rolecode') {
+    return PERSISTENT_SELF_REPRESENTATION_ROLE_CODES.has(subject.value.trim().toUpperCase());
+  }
+  if (subjectType === 'urn:altinn:role') {
+    return PERSISTENT_SELF_REPRESENTATION_ROLES.has(subject.value.trim().toLowerCase().split(':').at(-1) ?? '');
+  }
+  return false;
+}
+
 type MissingPackagesGuidanceKind = 'app' | 'resourceAdmin' | 'migrated';
 
 function MissingAccessPackagesGuidance({
@@ -461,6 +475,12 @@ export default function ResourcePage() {
     const key = subject.type + '::' + subject.value;
     return roleInfo[key]?.name ?? subject.value;
   }))];
+  const hasOnlyPersistentSelfRepresentationRoles =
+    roleSubjects.length > 0 && roleSubjects.every(isPersistentSelfRepresentationRole);
+  const shouldFlagMissingAccessPackages =
+    !loadingRules &&
+    packageSubjects.length === 0 &&
+    !hasOnlyPersistentSelfRepresentationRoles;
 
   // Altinn 2 ServiceEngine — identifier starts with se_
   const isServiceEngine = resource.identifier.startsWith('se_');
@@ -576,7 +596,7 @@ export default function ResourcePage() {
       </section>
 
       <div className="resource-alerts">
-        {!loadingRules && packageSubjects.length === 0 && (
+        {shouldFlagMissingAccessPackages && (
           <>
             <Alert data-color="warning">{t('resource.alert.noPackages')}</Alert>
             {missingPackagesGuidanceKind && (
