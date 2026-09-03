@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { Spinner, Alert } from '@digdir/designsystemet-react';
 import type { PackageDto, MetaResource, AreaGroupDto, PolicyRule, RoleDto } from '../types';
 import { getPackageUrnValue } from '../helpers';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
+import { lookupVisibility, retiredLabel, splitRetired, useVisibilityIndex } from '../serviceVisibility';
+import RetiredServicesNotice from '../components/RetiredServicesNotice';
 
 interface SearchResult {
   object: PackageDto;
@@ -54,6 +56,14 @@ export default function PackagePage() {
 
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
+
+  // Hidden and retired services are kept out of the list until the reader asks for them
+  const visibilityIndex = useVisibilityIndex(env);
+  const [showRetired, setShowRetired] = useState(false);
+  const { active: activeResources, retired: retiredResources } = useMemo(
+    () => splitRetired(resources, (r) => lookupVisibility(visibilityIndex, r.refId)),
+    [resources, visibilityIndex],
+  );
 
   // Fetch package data
   useEffect(() => {
@@ -154,6 +164,39 @@ export default function PackagePage() {
     .join('')
     .toUpperCase();
 
+  const renderResourceRow = (resource: MetaResource, retiredText?: string) => {
+    const actions = actionMap[resource.refId] ?? [];
+    return (
+      <Link
+        key={resource.id}
+        to={`/resource/${encodeURIComponent(resource.refId)}`}
+        className={`package-resource-row${retiredText ? ' is-retired' : ''}`}
+      >
+        <div className="package-resource-copy">
+          <strong>
+            {resource.name}
+            {retiredText && <span className="retired-chip">{retiredText}</span>}
+          </strong>
+          {resource.description && <p>{resource.description}</p>}
+          <div className="package-resource-meta">
+            {resource.provider?.name && <span>{resource.provider.name}</span>}
+            {resource.type?.name && <span>{resource.type.name}</span>}
+          </div>
+          {actions.length > 0 && (
+            <div className="package-action-list" aria-label={lang === 'nb' ? 'Rettigheter' : 'Permissions'}>
+              {actions.map((action) => (
+                <span className="package-action" data-action={action.toLowerCase()} key={action}>
+                  {action}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <span className="package-row-chevron" aria-hidden="true">›</span>
+      </Link>
+    );
+  };
+
   return (
     <div className="package-detail-page">
       <nav className="breadcrumbs" aria-label={lang === 'nb' ? 'Brødsmuler' : 'Breadcrumbs'}>
@@ -243,46 +286,32 @@ export default function PackagePage() {
                   : 'The services and permissions included in this access package.'}
               </p>
             </div>
-            <span className="package-count">{resources.length}</span>
+            <span className="package-count">{activeResources.length}</span>
           </header>
 
-          {resources.length === 0 ? (
+          {activeResources.length === 0 ? (
             <div className="detail-empty">{t('packages.noServices')}</div>
           ) : (
             <div className="package-resource-list">
-              {resources.map((resource) => {
-                const actions = actionMap[resource.refId] ?? [];
-                return (
-                  <Link
-                    key={resource.id}
-                    to={`/resource/${encodeURIComponent(resource.refId)}`}
-                    className="package-resource-row"
-                  >
-                    <div className="package-resource-copy">
-                      <strong>{resource.name}</strong>
-                      {resource.description && <p>{resource.description}</p>}
-                      <div className="package-resource-meta">
-                        {resource.provider?.name && <span>{resource.provider.name}</span>}
-                        {resource.type?.name && <span>{resource.type.name}</span>}
-                      </div>
-                      {actions.length > 0 && (
-                        <div className="package-action-list" aria-label={lang === 'nb' ? 'Rettigheter' : 'Permissions'}>
-                          {actions.map((action) => (
-                            <span
-                              className="package-action"
-                              data-action={action.toLowerCase()}
-                              key={action}
-                            >
-                              {action}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <span className="package-row-chevron" aria-hidden="true">›</span>
-                  </Link>
-                );
-              })}
+              {activeResources.map((resource) => renderResourceRow(resource))}
+            </div>
+          )}
+
+          <RetiredServicesNotice
+            count={retiredResources.length}
+            expanded={showRetired}
+            onToggle={() => setShowRetired((on) => !on)}
+            context="package"
+          />
+
+          {showRetired && retiredResources.length > 0 && (
+            <div className="package-resource-list">
+              {retiredResources.map((resource) =>
+                renderResourceRow(
+                  resource,
+                  retiredLabel(lookupVisibility(visibilityIndex, resource.refId), t('resource.notVisible')),
+                ),
+              )}
             </div>
           )}
         </main>

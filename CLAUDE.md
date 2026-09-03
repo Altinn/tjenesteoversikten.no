@@ -26,6 +26,10 @@ Full-stack web app for browsing/searching public digital services (Altinn ecosys
 - Frontend: single App.tsx with sample service data, multi-criteria filtering
 - Tailwind dark mode support, responsive grid layout
 - Path alias: `@` → `./src` in Vite config
+- Hidden/retired services (`visible=false`, or status Deprecated/Withdrawn/Discontinued) are kept out of
+  every service listing by default and revealed via a toggle — see `src/serviceVisibility.ts` and
+  `components/RetiredServicesNotice.tsx`. Note `Active` is a rare status; most live services are
+  `Completed` or have none, so never treat "not Active" as retired.
 - Designsystemet (@digdir/designsystemet-react) installed for UI components
 
 ## Resource Registry Proxy
