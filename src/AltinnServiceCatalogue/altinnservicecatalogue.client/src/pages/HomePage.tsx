@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, PolicyStatistics as PolicyStatisticsData, ResourceSummary, RoleDto } from '../types';
 import { fetchPackageGroupsBilingual, getText, packagePath } from '../helpers';
+import { isRetiredService, retiredLabel, splitRetired } from '../serviceVisibility';
+import RetiredServicesNotice from '../components/RetiredServicesNotice';
 import { useEnv } from '../env';
 import { useLang } from '../lang';
 import { getResourceTypeColor } from '../resourceTypes';
@@ -20,7 +22,7 @@ function OwnerLogo({ org, code, lang }: { org: Org; code: string; lang: string }
 }
 
 export default function HomePage() {
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const { env } = useEnv();
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,6 +39,7 @@ export default function HomePage() {
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedPackageArea, setSelectedPackageArea] = useState<string | null>(null);
+  const [showRetired, setShowRetired] = useState(false);
 
   const copy = lang === 'nb' ? {
     title: 'Hele det digitale tjeneste-Norge. Ett sted.',
@@ -96,8 +99,11 @@ export default function HomePage() {
     .filter((pkg) => !q || `${pkg.name} ${pkg.nameEn ?? ''} ${pkg.description}`.toLowerCase().includes(q))
     .map((pkg) => ({ pkg, area, group }))), [packageAreas, q]);
   const owners = useMemo(() => Object.entries(orgs).map(([code, org]) => ({ code, org })).filter(({ code, org }) => !q || code.toLowerCase().includes(q) || getText(org.name, lang).toLowerCase().includes(q)).sort((a, b) => getText(a.org.name, lang).localeCompare(getText(b.org.name, lang))), [orgs, q, lang]);
-  const heroResults = useMemo(() => { const hq = heroQuery.trim().toLowerCase(); if (hq.length < 2) return []; return resources.filter((r) => `${getText(r.title, lang)} ${getText(r.description, lang)} ${r.identifier} ${getText(r.hasCompetentAuthority?.name, lang)}`.toLowerCase().includes(hq)).slice(0, 6); }, [heroQuery, resources, lang]);
+  // Hidden and retired services rank last in the quick suggestions instead of crowding out live ones
+  const heroResults = useMemo(() => { const hq = heroQuery.trim().toLowerCase(); if (hq.length < 2) return []; return resources.filter((r) => `${getText(r.title, lang)} ${getText(r.description, lang)} ${r.identifier} ${getText(r.hasCompetentAuthority?.name, lang)}`.toLowerCase().includes(hq)).sort((a, b) => Number(isRetiredService(a)) - Number(isRetiredService(b))).slice(0, 6); }, [heroQuery, resources, lang]);
   const searchResults = useMemo(() => resources.filter((r) => (!q || `${getText(r.title, lang)} ${getText(r.description, lang)} ${r.identifier}`.toLowerCase().includes(q)) && (!selectedTypes.length || selectedTypes.includes(r.resourceType))), [resources, q, selectedTypes, lang]);
+  const { active: activeSearchResults, retired: retiredSearchResults } = useMemo(() => splitRetired(searchResults, (r) => r), [searchResults]);
+  const shownSearchResults = showRetired ? [...activeSearchResults, ...retiredSearchResults] : activeSearchResults;
   const format = (n: number) => new Intl.NumberFormat(lang === 'nb' ? 'nb-NO' : 'en-GB').format(n);
   const statValues: (number | null)[] = [
     loaded.resources ? resources.length : null,
@@ -115,7 +121,7 @@ export default function HomePage() {
           <h1>{copy.title}</h1><p>{copy.intro}</p>
           <div className="hero-search-wrap">
             <div className="hero-search-row"><label className="hero-search"><SearchIcon /><input value={heroQuery} onChange={(e) => setHeroQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitHero()} placeholder={copy.placeholder} aria-label={copy.placeholder} /></label><button className="primary-button" onClick={submitHero}>{copy.search}</button></div>
-            {heroQuery.trim().length >= 2 && <div className="search-dropdown">{heroResults.map((r) => <Link to={`/resource/${encodeURIComponent(r.identifier)}`} key={r.identifier}><span className={`type-chip type-${r.resourceType}`}>{r.resourceType}</span><strong>{getText(r.title, lang)}</strong><small>{getText(r.hasCompetentAuthority?.name, lang)}</small></Link>)}{!heroResults.length && <div className="empty-row">{copy.noResults}</div>}</div>}
+            {heroQuery.trim().length >= 2 && <div className="search-dropdown">{heroResults.map((r) => <Link to={`/resource/${encodeURIComponent(r.identifier)}`} key={r.identifier} className={isRetiredService(r) ? 'is-retired' : undefined}><span className={`type-chip type-${r.resourceType}`}>{r.resourceType}</span><strong>{getText(r.title, lang)}{isRetiredService(r) && <span className="retired-chip">{retiredLabel(r, t('resource.notVisible'))}</span>}</strong><small>{getText(r.hasCompetentAuthority?.name, lang)}</small></Link>)}{!heroResults.length && <div className="empty-row">{copy.noResults}</div>}</div>}
           </div>
         </div>
       </div>
@@ -145,7 +151,7 @@ export default function HomePage() {
         {activeTab === 'roles' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.roles} /><RoleGroups roles={roles.filter((r) => !q || `${r.name} ${r.code} ${r.description}`.toLowerCase().includes(q))} /></>}
         {activeTab === 'keywords' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.keywords} /><div className="keyword-cloud">{keywords.filter((word) => !q || word.toLowerCase().includes(q)).map((word) => <Link to={`/keyword/${encodeURIComponent(word)}`} key={word}>{word}</Link>)}</div></>}
         {activeTab === 'statistics' && <Statistics resources={resources} typeStats={typeStats} lang={lang} format={format} distribution={copy.distribution} env={env} />}
-        {activeTab === 'search' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.placeholder} wide /><div className="filter-chips">{typeStats.map(([type]) => <button className={selectedTypes.includes(type) ? 'active' : ''} onClick={() => setSelectedTypes((old) => old.includes(type) ? old.filter((x) => x !== type) : [...old, type])} key={type}>{type}</button>)}</div><div className="results-count">{format(searchResults.length)} {copy.results}</div><div className="result-list">{searchResults.slice(0, 100).map((r) => <Link to={`/resource/${encodeURIComponent(r.identifier)}`} key={r.identifier}><span className={`type-chip type-${r.resourceType}`}>{r.resourceType}</span><div><strong>{getText(r.title, lang)}</strong><p>{getText(r.description, lang)}</p></div><small>{getText(r.hasCompetentAuthority?.name, lang)}</small><span className="chevron">›</span></Link>)}</div></>}
+        {activeTab === 'search' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.placeholder} wide /><div className="filter-chips">{typeStats.map(([type]) => <button className={selectedTypes.includes(type) ? 'active' : ''} onClick={() => setSelectedTypes((old) => old.includes(type) ? old.filter((x) => x !== type) : [...old, type])} key={type}>{type}</button>)}</div><div className="results-count">{format(shownSearchResults.length)} {copy.results}</div><RetiredServicesNotice count={retiredSearchResults.length} expanded={showRetired} onToggle={() => setShowRetired((on) => !on)} /><div className="result-list">{shownSearchResults.slice(0, 100).map((r) => <Link to={`/resource/${encodeURIComponent(r.identifier)}`} key={r.identifier} className={isRetiredService(r) ? 'is-retired' : undefined}><span className={`type-chip type-${r.resourceType}`}>{r.resourceType}</span><div><strong>{getText(r.title, lang)}{isRetiredService(r) && <span className="retired-chip">{retiredLabel(r, t('resource.notVisible'))}</span>}</strong><p>{getText(r.description, lang)}</p></div><small>{getText(r.hasCompetentAuthority?.name, lang)}</small><span className="chevron">›</span></Link>)}</div></>}
         {loading && <div className="loading-state" aria-live="polite">{copy.loading}</div>}
       </div>
     </section>

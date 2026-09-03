@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import {
   Heading,
@@ -14,6 +14,8 @@ import type { RoleDto, SubjectResourcesResponse, PolicyRule, PackageDto, RoleVar
 import { packagePath } from '../helpers';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
+import { lookupVisibility, retiredLabel, splitRetired, useVisibilityIndex } from '../serviceVisibility';
+import RetiredServicesNotice from '../components/RetiredServicesNotice';
 
 interface ResourceInfo {
   refId: string;
@@ -150,6 +152,14 @@ export default function RolePage() {
 
   // Map of resourceRefId -> actions granted by this role
   const [actionMap, setActionMap] = useState<Record<string, string[]>>({});
+
+  // Hidden and retired services are kept out of the list until the reader asks for them
+  const visibilityIndex = useVisibilityIndex(env);
+  const [showRetired, setShowRetired] = useState(false);
+  const { active: activeResources, retired: retiredResources } = useMemo(
+    () => splitRetired(resources, (r) => lookupVisibility(visibilityIndex, r.refId)),
+    [resources, visibilityIndex],
+  );
 
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(false);
@@ -465,7 +475,7 @@ export default function RolePage() {
       {/* Services this role has access to */}
       <section>
         <Heading level={3} data-size="sm" className="mb-4">
-          {t('roles.services')} ({resources.length})
+          {t('roles.services')} ({activeResources.length})
         </Heading>
 
         {loadingResources && (
@@ -474,46 +484,73 @@ export default function RolePage() {
           </div>
         )}
 
-        {!loadingResources && resources.length === 0 && (
+        {!loadingResources && activeResources.length === 0 && (
           <Paragraph className="text-center py-16 text-gray-500">
             {t('roles.noServices')}
           </Paragraph>
         )}
 
-        {!loadingResources && resources.length > 0 && (
+        {!loadingResources && activeResources.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {resources.map((resource) => {
-              const actions = actionMap[resource.refId] ?? [];
-              return (
-                <Link
-                  key={resource.refId}
-                  to={`/resource/${encodeURIComponent(resource.refId)}`}
-                  className="no-underline"
-                >
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                    <CardBlock className="p-5 flex flex-col gap-2">
-                      <Heading level={4} data-size="2xs">
-                        {resource.name}
-                      </Heading>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {actions.map((action) => (
-                          <Tag
-                            key={action}
-                            data-size="sm"
-                            data-color={ACTION_COLORS[action] ?? 'neutral'}
-                          >
-                            {action}
-                          </Tag>
-                        ))}
-                      </div>
-                    </CardBlock>
-                  </Card>
-                </Link>
-              );
-            })}
+            {activeResources.map((resource) => (
+              <ResourceCard key={resource.refId} resource={resource} actions={actionMap[resource.refId] ?? []} />
+            ))}
+          </div>
+        )}
+
+        {!loadingResources && (
+          <RetiredServicesNotice
+            count={retiredResources.length}
+            expanded={showRetired}
+            onToggle={() => setShowRetired((on) => !on)}
+            context="role"
+          />
+        )}
+
+        {!loadingResources && showRetired && retiredResources.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {retiredResources.map((resource) => (
+              <ResourceCard
+                key={resource.refId}
+                resource={resource}
+                actions={actionMap[resource.refId] ?? []}
+                retired={retiredLabel(lookupVisibility(visibilityIndex, resource.refId), t('resource.notVisible'))}
+              />
+            ))}
           </div>
         )}
       </section>
     </>
+  );
+}
+
+/** One service the role grants access to. `retired` labels services that are hidden or no longer active. */
+function ResourceCard({
+  resource,
+  actions,
+  retired,
+}: {
+  resource: ResourceInfo;
+  actions: string[];
+  retired?: string;
+}) {
+  return (
+    <Link to={`/resource/${encodeURIComponent(resource.refId)}`} className="no-underline">
+      <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full${retired ? ' is-retired' : ''}`}>
+        <CardBlock className="p-5 flex flex-col gap-2">
+          <Heading level={4} data-size="2xs">
+            {resource.name}
+            {retired && <span className="retired-chip">{retired}</span>}
+          </Heading>
+          <div className="flex flex-wrap gap-1 mt-2">
+            {actions.map((action) => (
+              <Tag key={action} data-size="sm" data-color={ACTION_COLORS[action] ?? 'neutral'}>
+                {action}
+              </Tag>
+            ))}
+          </div>
+        </CardBlock>
+      </Card>
+    </Link>
   );
 }

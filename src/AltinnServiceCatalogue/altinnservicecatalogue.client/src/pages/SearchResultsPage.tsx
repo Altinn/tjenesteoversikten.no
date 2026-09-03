@@ -19,6 +19,8 @@ import { getText, packagePath, getPackageUrnValue, fetchPackageGroupsBilingual }
 import { useLang } from '../lang';
 import { useEnv } from '../env';
 import { ResourceTypeTag, RESOURCE_TYPE_COLORS } from '../components/ResourceTypeTag';
+import { isRetiredService, retiredLabel, splitRetired } from '../serviceVisibility';
+import RetiredServicesNotice from '../components/RetiredServicesNotice';
 
 interface PackageHit {
   pkg: PackageDto;
@@ -157,7 +159,7 @@ export default function SearchResultsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availableOwnerKey]);
 
-  const visibleServices = useMemo(
+  const filteredServices = useMemo(
     () => results.services.filter(
       (r) =>
         (!r.resourceType || selectedTypes.includes(r.resourceType)) &&
@@ -166,6 +168,14 @@ export default function SearchResultsPage() {
     ),
     [results.services, selectedTypes, selectedStatuses, selectedOwners],
   );
+
+  // Hidden and retired services stay out of the result grid until the user asks for them
+  const [showRetired, setShowRetired] = useState(false);
+  const { active: activeServices, retired: retiredServices } = useMemo(
+    () => splitRetired(filteredServices, (r) => r),
+    [filteredServices],
+  );
+  const shownServices = showRetired ? [...activeServices, ...retiredServices] : activeServices;
 
   const hasQuery = query.trim().length >= 2;
   const totalHits = results.services.length + results.packages.length;
@@ -236,8 +246,8 @@ export default function SearchResultsPage() {
           {results.services.length > 0 && (
             <section className="mb-10">
               <Heading level={3} data-size="sm" className="mb-4">
-                {t('results.services')} ({visibleServices.length}
-                {visibleServices.length !== results.services.length && ` / ${results.services.length}`})
+                {t('results.services')} ({shownServices.length}
+                {shownServices.length !== results.services.length && ` / ${results.services.length}`})
               </Heading>
 
               {/* Service type filter — all preselected, deselect to narrow */}
@@ -351,22 +361,35 @@ export default function SearchResultsPage() {
                 </div>
               )}
 
-              {visibleServices.length === 0 ? (
+              <RetiredServicesNotice
+                count={retiredServices.length}
+                expanded={showRetired}
+                onToggle={() => setShowRetired((on) => !on)}
+              />
+
+              {shownServices.length === 0 ? (
                 <Paragraph className="py-8" style={{ color: 'var(--ds-color-neutral-text-subtle)' }}>
                   {t('results.noTypeMatch')}
                 </Paragraph>
               ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {visibleServices.map((resource) => (
+                {shownServices.map((resource) => (
                   <Link
                     key={resource.identifier}
                     to={`/resource/${encodeURIComponent(resource.identifier)}`}
                     className="no-underline"
                   >
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                    <Card
+                      className={`hover:shadow-md transition-shadow cursor-pointer h-full${isRetiredService(resource) ? ' is-retired' : ''}`}
+                    >
                       <CardBlock className="p-5 flex flex-col gap-2">
                         <Heading level={4} data-size="2xs">
                           {getText(resource.title, lang)}
+                          {isRetiredService(resource) && (
+                            <span className="retired-chip">
+                              {retiredLabel(resource, t('resource.notVisible'))}
+                            </span>
+                          )}
                         </Heading>
                         <Paragraph data-size="sm" className="text-gray-600 line-clamp-3">
                           {getText(resource.description, lang)}
