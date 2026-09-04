@@ -6,6 +6,8 @@ import {
   enrichPackageFromLookup,
   fetchPackageLookupBilingual,
   getLocalizedPackageDescription,
+  getLocalizedAreaName,
+  getLocalizedGroupName,
   getLocalizedPackageName,
   getPackageUrnValue,
 } from '../helpers';
@@ -159,8 +161,8 @@ export default function PackagePage() {
 
   const packageName = getLocalizedPackageName(pkg, lang);
   const packageDescription = getLocalizedPackageDescription(pkg, lang);
-  const areaName = pkg.area?.name;
-  const groupName = pkg.area?.group?.name;
+  const areaName = pkg.area ? getLocalizedAreaName(pkg.area, lang) : undefined;
+  const groupName = pkg.area?.group ? getLocalizedGroupName(pkg.area.group, lang) : undefined;
   const areaInitials = (areaName ?? packageName)
     .split(/\s+/)
     .filter(Boolean)

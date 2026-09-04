@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AreaGroupDto, PackageDto } from './types';
+import type { AreaDto, AreaGroupDto, PackageDto } from './types';
 
 export function getText(dict: Record<string, string> | undefined | null, lang: string = 'nb'): string {
   if (!dict) return '';
@@ -20,7 +20,7 @@ export function packagePath(pkg: { id: string; urn?: string | null }): string {
 
 /**
  * Fetch the access package export in both Norwegian and English and merge them,
- * attaching nameEn/descriptionEn to each package. English is nice-to-have:
+ * attaching nameEn/descriptionEn to each group, area, and package. English is nice-to-have:
  * if that fetch fails, the Norwegian export is returned as-is.
  */
 export async function fetchPackageGroupsBilingual(env: string): Promise<AreaGroupDto[]> {
@@ -36,26 +36,58 @@ export async function fetchPackageGroupsBilingual(env: string): Promise<AreaGrou
 
   if (!enGroups) return nbGroups;
 
-  const enById = new Map<string, { name: string; description: string }>();
+  const enGroupsById = new Map(enGroups.map((group) => [group.id, group]));
+  const enAreasById = new Map<string, AreaDto>();
+  const enPackagesById = new Map<string, PackageDto>();
   for (const g of enGroups) {
     for (const a of g.areas ?? []) {
+      enAreasById.set(a.id, a);
       for (const p of a.packages ?? []) {
-        enById.set(p.id, { name: p.name, description: p.description });
+        enPackagesById.set(p.id, p);
       }
     }
   }
 
-  return nbGroups.map((g) => ({
-    ...g,
-    areas: (g.areas ?? []).map((a) => ({
-      ...a,
-      packages: (a.packages ?? []).map((p) => {
-        const en = enById.get(p.id);
-        return en ? { ...p, nameEn: en.name, descriptionEn: en.description } : p;
+  return nbGroups.map((g) => {
+    const enGroup = enGroupsById.get(g.id);
+    return {
+      ...g,
+      nameEn: enGroup?.name,
+      descriptionEn: enGroup?.description,
+      areas: (g.areas ?? []).map((a) => {
+        const enArea = enAreasById.get(a.id);
+        return {
+          ...a,
+          nameEn: enArea?.name,
+          descriptionEn: enArea?.description,
+          packages: (a.packages ?? []).map((p) => {
+            const enPackage = enPackagesById.get(p.id);
+            return enPackage
+              ? { ...p, nameEn: enPackage.name, descriptionEn: enPackage.description }
+              : p;
+          }),
+        };
       }),
-    })),
-  }));
+    };
+  });
 }
+
+export function getLocalizedAreaName(area: AreaDto, lang: string): string {
+  return lang === 'en' && area.nameEn ? area.nameEn : area.name;
+}
+
+export function getLocalizedAreaDescription(area: AreaDto, lang: string): string {
+  return lang === 'en' && area.descriptionEn ? area.descriptionEn : area.description;
+}
+
+export function getLocalizedGroupName(group: AreaGroupDto, lang: string): string {
+  return lang === 'en' && group.nameEn ? group.nameEn : group.name;
+}
+
+export function getLocalizedGroupDescription(group: AreaGroupDto, lang: string): string {
+  return lang === 'en' && group.descriptionEn ? group.descriptionEn : group.description;
+}
+
 
 export function getLocalizedPackageName(pkg: PackageDto, lang: string): string {
   return lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name;
@@ -111,7 +143,20 @@ export function enrichPackageFromLookup(
     ...pkg,
     nameEn: pkg.nameEn ?? localized.nameEn,
     descriptionEn: pkg.descriptionEn ?? localized.descriptionEn,
-    area: pkg.area?.group ? pkg.area : localized.area,
+    area: pkg.area
+      ? {
+          ...pkg.area,
+          nameEn: pkg.area.nameEn ?? localized.area?.nameEn,
+          descriptionEn: pkg.area.descriptionEn ?? localized.area?.descriptionEn,
+          group: pkg.area.group
+            ? {
+                ...pkg.area.group,
+                nameEn: pkg.area.group.nameEn ?? localized.area?.group?.nameEn,
+                descriptionEn: pkg.area.group.descriptionEn ?? localized.area?.group?.descriptionEn,
+              }
+            : localized.area?.group,
+        }
+      : localized.area,
   };
 }
 
