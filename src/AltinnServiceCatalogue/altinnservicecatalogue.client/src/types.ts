@@ -141,6 +141,9 @@ export interface AreaDto {
   name: string;
   urn: string;
   description: string;
+  /** English texts merged client-side from the language=eng export */
+  nameEn?: string;
+  descriptionEn?: string;
   iconUrl?: string;
   packages?: PackageDto[];
   group?: AreaGroupDto;
@@ -151,6 +154,9 @@ export interface AreaGroupDto {
   name: string;
   urn: string;
   description: string;
+  /** English texts merged client-side from the language=eng export */
+  nameEn?: string;
+  descriptionEn?: string;
   type: string;
   areas?: AreaDto[];
 }

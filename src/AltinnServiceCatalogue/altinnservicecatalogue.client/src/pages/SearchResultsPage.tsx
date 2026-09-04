@@ -18,6 +18,8 @@ import type { ServiceResource, AreaGroupDto, PackageDto } from '../types';
 import {
   fetchPackageGroupsBilingual,
   getLocalizedPackageDescription,
+  getLocalizedAreaName,
+  getLocalizedGroupName,
   getLocalizedPackageName,
   getPackageUrnValue,
   getText,
@@ -90,7 +92,11 @@ export default function SearchResultsPage() {
             p.nameEn?.toLowerCase().includes(q) ||
             p.descriptionEn?.toLowerCase().includes(q)
           ) {
-            packages.push({ pkg: p, areaName: a.name, groupName: g.name });
+            packages.push({
+              pkg: p,
+              areaName: getLocalizedAreaName(a, lang),
+              groupName: getLocalizedGroupName(g, lang),
+            });
           }
         }
       }

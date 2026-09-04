@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, PolicyStatistics as PolicyStatisticsData, ResourceSummary, RoleDto } from '../types';
-import { fetchPackageGroupsBilingual, getText, packagePath } from '../helpers';
+import { fetchPackageGroupsBilingual, getLocalizedAreaName, getLocalizedGroupName, getLocalizedPackageName, getText, packagePath } from '../helpers';
 import { isRetiredService, retiredLabel, splitRetired } from '../serviceVisibility';
 import RetiredServicesNotice from '../components/RetiredServicesNotice';
 import { useEnv } from '../env';
@@ -141,11 +141,11 @@ export default function HomePage() {
           ) : selectedArea ? (
             <div className="package-browser">
               <button className="package-browser-back" onClick={() => setSelectedPackageArea(null)}>← {lang === 'nb' ? 'Alle områder' : 'All areas'}</button>
-              <div className="package-browser-header"><span className="initial-tile">{initials(selectedArea.area.name)}</span><div><h2>{selectedArea.area.name}</h2><p>{selectedArea.group.name} · {selectedArea.area.packages?.length ?? 0} {copy.packages}</p></div></div>
+              <div className="package-browser-header"><span className="initial-tile">{initials(getLocalizedAreaName(selectedArea.area, lang))}</span><div><h2>{getLocalizedAreaName(selectedArea.area, lang)}</h2><p>{getLocalizedGroupName(selectedArea.group, lang)} · {selectedArea.area.packages?.length ?? 0} {copy.packages}</p></div></div>
               <PackageLinks items={(selectedArea.area.packages ?? []).map((pkg) => ({ pkg, area: selectedArea.area, group: selectedArea.group }))} lang={lang} />
             </div>
           ) : (
-            <div className="package-groups">{groups.map((group) => <section key={group.id}><h2>{group.name}</h2><div className="area-grid">{(group.areas ?? []).map((area) => <button className="package-area-card" onClick={() => setSelectedPackageArea(area.id)} key={area.id}><span className="initial-tile">{initials(area.name)}</span><div><strong>{area.name}</strong><small>{area.packages?.length ?? 0} {copy.packages}</small></div><span className="chevron">›</span></button>)}</div></section>)}</div>
+            <div className="package-groups">{groups.map((group) => <section key={group.id}><h2>{getLocalizedGroupName(group, lang)}</h2><div className="area-grid">{(group.areas ?? []).map((area) => <button className="package-area-card" onClick={() => setSelectedPackageArea(area.id)} key={area.id}><span className="initial-tile">{initials(getLocalizedAreaName(area, lang))}</span><div><strong>{getLocalizedAreaName(area, lang)}</strong><small>{area.packages?.length ?? 0} {copy.packages}</small></div><span className="chevron">›</span></button>)}</div></section>)}</div>
           )}
         </>}
         {activeTab === 'roles' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.roles} /><RoleGroups roles={roles.filter((r) => !q || `${r.name} ${r.code} ${r.description}`.toLowerCase().includes(q))} /></>}
@@ -188,7 +188,7 @@ function getAlgorithmColor(algorithm: string) {
 }
 function Distribution({ stats, colorFor = getResourceTypeColor }: { stats: [string, number][]; colorFor?: (value: string) => string }) { return <div className="distribution" aria-hidden="true">{stats.map(([type, count]) => <span key={type} style={{ flex: count, background: colorFor(type) }} />)}</div>; }
 function PackageLinks({ items, lang, heading }: { items: { pkg: PackageDto; area: AreaDto; group: AreaGroupDto }[]; lang: string; heading?: string }) {
-  return <div className="package-links-wrap">{heading && <div className="results-count">{heading}</div>}<div className="package-link-grid">{items.map(({ pkg, area }) => <Link className="package-link-card" to={packagePath(pkg)} state={{ pkg }} key={pkg.id}><div><strong>{lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name}</strong><small>{area.name}</small></div><span className="chevron">›</span></Link>)}</div></div>;
+  return <div className="package-links-wrap">{heading && <div className="results-count">{heading}</div>}<div className="package-link-grid">{items.map(({ pkg, area }) => <Link className="package-link-card" to={packagePath(pkg)} state={{ pkg }} key={pkg.id}><div><strong>{getLocalizedPackageName(pkg, lang)}</strong><small>{getLocalizedAreaName(area, lang)}</small></div><span className="chevron">›</span></Link>)}</div></div>;
 }
 function RoleGroups({ roles }: { roles: RoleDto[] }) { const groups = useMemo(() => { const map = new Map<string, RoleDto[]>(); roles.forEach((r) => { const key = r.provider?.name ?? 'Altinn'; map.set(key, [...(map.get(key) ?? []), r]); }); return [...map.entries()]; }, [roles]); return <div className="role-groups">{groups.map(([provider, items]) => <section key={provider}><h2>{provider}</h2><div className="role-list">{items.map((r) => <Link to={`/role/${r.id}`} key={r.id}><strong>{r.name}</strong><span>{r.description}</span><code>{r.code}</code></Link>)}</div></section>)}</div>; }
 function Statistics({ resources, typeStats, lang, format, distribution, env }: { resources: ResourceSummary[]; typeStats: [string, number][]; lang: string; format: (n: number) => string; distribution: string; env: string }) {
