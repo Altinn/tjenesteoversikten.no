@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { Spinner, Alert } from '@digdir/designsystemet-react';
 import type { PackageDto, MetaResource, AreaGroupDto, PolicyRule, RoleDto } from '../types';
-import { getPackageUrnValue } from '../helpers';
+import {
+  enrichPackageFromLookup,
+  fetchPackageLookupBilingual,
+  getLocalizedPackageDescription,
+  getLocalizedPackageName,
+  getPackageUrnValue,
+} from '../helpers';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
 import { lookupVisibility, retiredLabel, splitRetired, useVisibilityIndex } from '../serviceVisibility';
@@ -151,9 +157,8 @@ export default function PackagePage() {
     );
   }
 
-  const packageName = lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name;
-  const packageDescription =
-    lang === 'en' && pkg.descriptionEn ? pkg.descriptionEn : pkg.description;
+  const packageName = getLocalizedPackageName(pkg, lang);
+  const packageDescription = getLocalizedPackageDescription(pkg, lang);
   const areaName = pkg.area?.name;
   const groupName = pkg.area?.group?.name;
   const areaInitials = (areaName ?? packageName)
@@ -377,10 +382,21 @@ export default function PackagePage() {
  */
 async function fetchPackage(env: string, packageId: string, statePkg: PackageDto | null): Promise<PackageDto | null> {
   // If we have state from navigation, search by name to get the version with resources
+  const packageLookup = await fetchPackageLookupBilingual(env)
+    .catch(() => new Map<string, PackageDto>());
+
   if (statePkg) {
     const withResources = await searchForPackage(env, statePkg.name, statePkg.id);
     if (withResources) {
-      return enrichWithAreaInfo(env, withResources);
+      const enriched = await enrichWithAreaInfo(env, withResources);
+      return enrichPackageFromLookup(
+        {
+          ...enriched,
+          nameEn: enriched.nameEn ?? statePkg.nameEn,
+          descriptionEn: enriched.descriptionEn ?? statePkg.descriptionEn,
+        },
+        packageLookup,
+      );
     }
   }
 
@@ -398,6 +414,10 @@ async function fetchPackage(env: string, packageId: string, statePkg: PackageDto
   }
 
   if (!pkg) {
+    pkg = packageLookup.get(packageId.toLowerCase()) ?? null;
+  }
+
+  if (!pkg) {
     pkg = await findPackageInExport(env, packageId);
   }
 
@@ -406,10 +426,10 @@ async function fetchPackage(env: string, packageId: string, statePkg: PackageDto
   // Search by name to get the version with resources included
   const withResources = await searchForPackage(env, pkg.name, pkg.id);
   if (withResources) {
-    return enrichWithAreaInfo(env, withResources);
+    return enrichPackageFromLookup(await enrichWithAreaInfo(env, withResources), packageLookup);
   }
 
-  return enrichWithAreaInfo(env, pkg);
+  return enrichPackageFromLookup(await enrichWithAreaInfo(env, pkg), packageLookup);
 }
 
 /** Search for a package by name and match by ID to get the version with resources */

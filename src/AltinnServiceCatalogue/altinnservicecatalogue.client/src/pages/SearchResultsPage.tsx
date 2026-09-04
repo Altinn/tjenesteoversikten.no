@@ -15,7 +15,14 @@ import {
   Chip,
 } from '@digdir/designsystemet-react';
 import type { ServiceResource, AreaGroupDto, PackageDto } from '../types';
-import { getText, packagePath, getPackageUrnValue, fetchPackageGroupsBilingual } from '../helpers';
+import {
+  fetchPackageGroupsBilingual,
+  getLocalizedPackageDescription,
+  getLocalizedPackageName,
+  getPackageUrnValue,
+  getText,
+  packagePath,
+} from '../helpers';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
 import { ResourceTypeTag, RESOURCE_TYPE_COLORS } from '../components/ResourceTypeTag';
@@ -436,19 +443,11 @@ export default function SearchResultsPage() {
                     <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
                       <CardBlock className="p-5 flex flex-col gap-2">
                         <Heading level={4} data-size="2xs">
-                          {pkg.name}
+                          {getLocalizedPackageName(pkg, lang)}
                         </Heading>
-                        {pkg.nameEn && pkg.nameEn !== pkg.name && (
-                          <Paragraph data-size="sm" style={{ color: 'var(--ds-color-neutral-text-subtle)' }}>
-                            {pkg.nameEn}
-                          </Paragraph>
-                        )}
-                        <Paragraph data-size="sm" className="text-gray-600 line-clamp-2">
-                          {pkg.description}
-                        </Paragraph>
-                        {pkg.descriptionEn && pkg.descriptionEn !== pkg.description && (
-                          <Paragraph data-size="sm" className="line-clamp-2 italic" style={{ color: 'var(--ds-color-neutral-text-subtle)' }}>
-                            {pkg.descriptionEn}
+                        {getLocalizedPackageDescription(pkg, lang) && (
+                          <Paragraph data-size="sm" className="text-gray-600 line-clamp-2">
+                            {getLocalizedPackageDescription(pkg, lang)}
                           </Paragraph>
                         )}
                         <div className="text-xs mt-2" style={{ color: 'var(--ds-color-neutral-text-subtle)' }}>

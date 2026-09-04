@@ -11,7 +11,13 @@ import {
   Tabs,
 } from '@digdir/designsystemet-react';
 import type { RoleDto, SubjectResourcesResponse, PolicyRule, PackageDto, RoleVariantPackagesDto } from '../types';
-import { packagePath } from '../helpers';
+import {
+  enrichPackageFromLookup,
+  fetchPackageLookupBilingual,
+  getLocalizedPackageDescription,
+  getLocalizedPackageName,
+  packagePath,
+} from '../helpers';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
 import { lookupVisibility, retiredLabel, splitRetired, useVisibilityIndex } from '../serviceVisibility';
@@ -89,7 +95,7 @@ const BATCH_SIZE = 20;
 
 /** Grid of access package cards, shared between the default list and the per-variant tabs */
 function PackageGrid({ packages }: { packages: PackageDto[] }) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {packages.map((pkg) => (
@@ -106,12 +112,12 @@ function PackageGrid({ packages }: { packages: PackageDto[] }) {
                   <img src={pkg.area.iconUrl} alt="" className="w-5 h-5 flex-shrink-0" />
                 )}
                 <Heading level={4} data-size="2xs">
-                  {pkg.name}
+                  {getLocalizedPackageName(pkg, lang)}
                 </Heading>
               </div>
-              {pkg.description && (
+              {getLocalizedPackageDescription(pkg, lang) && (
                 <Paragraph data-size="sm" className="text-gray-600 line-clamp-3">
-                  {pkg.description}
+                  {getLocalizedPackageDescription(pkg, lang)}
                 </Paragraph>
               )}
               <div className="flex flex-wrap gap-1 mt-1">
@@ -203,12 +209,16 @@ export default function RolePage() {
 
     let cancelled = false;
 
+    const packageLookupPromise = fetchPackageLookupBilingual(env)
+      .catch(() => new Map<string, PackageDto>());
     (async () => {
       try {
         const res = await fetch(`/api/v1/${env}/meta/info/roles/${role.id}/packages?variant=person`);
         if (!res.ok) throw new Error(`Failed to fetch role packages: ${res.status}`);
         const data: PackageDto[] = await res.json();
-        const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name));
+        const packageLookup = await packageLookupPromise;
+        const sorted = data.map((pkg) => enrichPackageFromLookup(pkg, packageLookup))
+          .sort((a, b) => a.name.localeCompare(b.name));
         if (cancelled) return;
         setPackages(sorted);
 
@@ -216,9 +226,13 @@ export default function RolePage() {
           const vRes = await fetch(`/api/v1/${env}/meta/info/roles/${role.id}/packages/byvariant`);
           if (vRes.ok) {
             const variants: RoleVariantPackagesDto[] = await vRes.json();
+            const localizedVariants = variants.map((item) => ({
+              ...item,
+              packages: item.packages.map((pkg) => enrichPackageFromLookup(pkg, packageLookup)),
+            }));
             if (cancelled) return;
-            setVariantPackages(variants);
-            setActiveVariant(variants[0]?.variantName ?? '');
+            setVariantPackages(localizedVariants);
+            setActiveVariant(localizedVariants[0]?.variantName ?? '');
           }
         }
       } catch {

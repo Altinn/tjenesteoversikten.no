@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Spinner, Alert } from '@digdir/designsystemet-react';
 import type { ServiceResource, PolicyRule, PackageDto, RoleDto, ResourceRight, AttributeMatch } from '../types';
-import { getText } from '../helpers';
+import { fetchPackageLookupBilingual, getLocalizedPackageName, getText } from '../helpers';
 import { useLang } from '../lang';
 import { useEnv } from '../env';
 
@@ -220,7 +220,7 @@ export default function ResourcePage() {
   const [loadingRules, setLoadingRules] = useState(false);
 
   // Resolved links for packages and roles
-  const [packageInfo, setPackageInfo] = useState<Record<string, { id: string; name: string }>>({});
+  const [packageInfo, setPackageInfo] = useState<Record<string, PackageDto>>({});
   const [roleInfo, setRoleInfo] = useState<Record<string, { id: string; name: string }>>({});
 
   // Security level from XACML policy obligations
@@ -343,30 +343,25 @@ export default function ResourcePage() {
 
   // Resolve package URN values to IDs and names
   useEffect(() => {
-    if (packageSubjects.length === 0) return;
+    if (packageSubjects.length === 0) {
+      setPackageInfo({});
+      return;
+    }
     let cancelled = false;
 
-    Promise.all(
-      packageSubjects.map(async (subject) => {
-        try {
-          const res = await fetch(
-            `/api/v1/${env}/meta/info/accesspackages/urn/${encodeURIComponent(subject.value)}`,
-          );
-          if (!res.ok) return null;
-          const pkg: PackageDto = await res.json();
-          return { urnValue: subject.value, id: pkg.id, name: pkg.name };
-        } catch {
-          return null;
+    fetchPackageLookupBilingual(env)
+      .then((lookup) => {
+        if (cancelled) return;
+        const info: Record<string, PackageDto> = {};
+        for (const subject of packageSubjects) {
+          const pkg = lookup.get(subject.value.toLowerCase());
+          if (pkg) info[subject.value] = pkg;
         }
-      }),
-    ).then((results) => {
-      if (cancelled) return;
-      const info: Record<string, { id: string; name: string }> = {};
-      for (const r of results) {
-        if (r) info[r.urnValue] = { id: r.id, name: r.name };
-      }
-      setPackageInfo(info);
-    });
+        setPackageInfo(info);
+      })
+      .catch(() => {
+        if (!cancelled) setPackageInfo({});
+      });
 
     return () => { cancelled = true; };
   }, [packageSubjects, env]);
@@ -645,7 +640,7 @@ export default function ResourcePage() {
                     return (
                       <Link className="resource-access-row" key={subject.value} to={'/package/' + encodeURIComponent(subject.value)}>
                         <span className="resource-access-copy">
-                          <strong>{pkg ? pkg.name : subject.value}</strong>
+                          <strong>{pkg ? getLocalizedPackageName(pkg, lang) : subject.value}</strong>
                           {pkg && <code>{subject.value}</code>}
                           <ActionList actions={subject.actions} unknown={subject.actionsUnknown} unknownLabel={t('resource.actionsUnknown')} />
                         </span>

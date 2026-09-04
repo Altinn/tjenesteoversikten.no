@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AreaGroupDto } from './types';
+import type { AreaGroupDto, PackageDto } from './types';
 
 export function getText(dict: Record<string, string> | undefined | null, lang: string = 'nb'): string {
   if (!dict) return '';
@@ -55,6 +55,64 @@ export async function fetchPackageGroupsBilingual(env: string): Promise<AreaGrou
       }),
     })),
   }));
+}
+
+export function getLocalizedPackageName(pkg: PackageDto, lang: string): string {
+  return lang === 'en' && pkg.nameEn ? pkg.nameEn : pkg.name;
+}
+
+export function getLocalizedPackageDescription(pkg: PackageDto, lang: string): string {
+  return lang === 'en' && pkg.descriptionEn ? pkg.descriptionEn : pkg.description;
+}
+
+/** Build a lookup that accepts package ID, full URN, or the short URN value. */
+export function buildPackageLookup(groups: AreaGroupDto[]): Map<string, PackageDto> {
+  const lookup = new Map<string, PackageDto>();
+
+  for (const group of groups) {
+    for (const area of group.areas ?? []) {
+      for (const pkg of area.packages ?? []) {
+        const packageWithArea: PackageDto = {
+          ...pkg,
+          area: {
+            ...area,
+            packages: undefined,
+            group: { ...group, areas: undefined },
+          },
+        };
+
+        lookup.set(pkg.id.toLowerCase(), packageWithArea);
+        if (pkg.urn) {
+          lookup.set(pkg.urn.toLowerCase(), packageWithArea);
+          lookup.set(getPackageUrnValue(pkg.urn).toLowerCase(), packageWithArea);
+        }
+      }
+    }
+  }
+
+  return lookup;
+}
+
+export async function fetchPackageLookupBilingual(env: string): Promise<Map<string, PackageDto>> {
+  return buildPackageLookup(await fetchPackageGroupsBilingual(env));
+}
+
+/** Add bilingual display text and export metadata to a package returned by another endpoint. */
+export function enrichPackageFromLookup(
+  pkg: PackageDto,
+  lookup: Map<string, PackageDto>,
+): PackageDto {
+  const localized = lookup.get(pkg.id.toLowerCase())
+    ?? (pkg.urn ? lookup.get(pkg.urn.toLowerCase()) : undefined);
+
+  if (!localized) return pkg;
+
+  return {
+    ...pkg,
+    nameEn: pkg.nameEn ?? localized.nameEn,
+    descriptionEn: pkg.descriptionEn ?? localized.descriptionEn,
+    area: pkg.area?.group ? pkg.area : localized.area,
+  };
 }
 
 export function OrgLogo({ src, alt, fallback }: { src: string; alt: string; fallback: string }) {
