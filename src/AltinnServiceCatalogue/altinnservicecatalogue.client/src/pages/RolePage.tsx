@@ -15,6 +15,7 @@ import {
   enrichPackageFromLookup,
   fetchPackageLookupBilingual,
   getLocalizedPackageDescription,
+  getLocalizedAreaName,
   getLocalizedPackageName,
   packagePath,
 } from '../helpers';
@@ -123,7 +124,7 @@ function PackageGrid({ packages }: { packages: PackageDto[] }) {
               <div className="flex flex-wrap gap-1 mt-1">
                 {pkg.area && (
                   <Tag data-size="sm" data-color="neutral">
-                    {pkg.area.name}
+                    {getLocalizedAreaName(pkg.area, lang)}
                   </Tag>
                 )}
                 <Tag

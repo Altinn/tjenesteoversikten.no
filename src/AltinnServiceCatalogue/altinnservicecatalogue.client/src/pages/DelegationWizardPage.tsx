@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { AreaDto, AreaGroupDto, PackageDto } from '../types';
-import { fetchPackageGroupsBilingual, packagePath } from '../helpers';
+import { fetchPackageGroupsBilingual, getLocalizedAreaName, packagePath } from '../helpers';
 import { useEnv } from '../env'; import { useLang } from '../lang';
 
 const WHO = ['colleague', 'accountant', 'system'] as const;
@@ -33,7 +33,7 @@ export default function DelegationWizardPage() {
   const back = () => { if (step === 3) setWho(null); else setArea(null); };
   return <div className="wizard-page"><header><span className="eyebrow">{copy.label}</span><h1>{copy.questions[step - 1]}</h1><p>{copy.sub}</p><div className="wizard-progress">{[1,2,3].map((n) => <i className={n <= step ? 'active' : ''} key={n} />)}</div></header>
     {loading && <div className="detail-empty">{copy.loading}</div>}{error && <div className="detail-empty">{error}</div>}
-    {!loading && !error && step === 1 && <div className="wizard-area-grid">{areas.map((item) => <button onClick={() => setArea(item)} key={item.id}><span className="initial-tile">{initials(item.name)}</span><div><strong>{item.name}</strong><small>{item.packages?.length ?? 0} {copy.packages}</small></div><span>›</span></button>)}</div>}
+    {!loading && !error && step === 1 && <div className="wizard-area-grid">{areas.map((item) => <button onClick={() => setArea(item)} key={item.id}><span className="initial-tile">{initials(getLocalizedAreaName(item, lang))}</span><div><strong>{getLocalizedAreaName(item, lang)}</strong><small>{item.packages?.length ?? 0} {copy.packages}</small></div><span>›</span></button>)}</div>}
     {step === 2 && <div className="wizard-who-grid">{WHO.map((value, i) => <button onClick={() => setWho(value)} key={value}><strong>{copy.who[i][0]}</strong><span>{copy.who[i][1]}</span><b>›</b></button>)}</div>}
     {step === 3 && recommendation && <article className="recommendation"><span className="eyebrow">{copy.rec}</span><h2>{lang === 'en' && recommendation.nameEn ? recommendation.nameEn : recommendation.name}</h2><p>{lang === 'en' && recommendation.descriptionEn ? recommendation.descriptionEn : recommendation.description}</p><div>{note}</div><footer><Link className="primary-button" to={packagePath(recommendation)} state={{ pkg: recommendation }}>{copy.see}</Link><button onClick={() => { setArea(null); setWho(null); }}>{copy.restart}</button></footer></article>}
     {step > 1 && <button className="wizard-back" onClick={back}>{copy.back}</button>}
