@@ -86,3 +86,9 @@ endringer, og dokumenter målrettet funksjonell verifisering.
 Kilder: [installasjon](https://github.github.com/spec-kit/installation.html),
 [eksisterende prosjekter](https://github.github.com/spec-kit/guides/existing-projects.html),
 [integrasjoner](https://github.github.com/spec-kit/reference/integrations.html).
+
+## Referanseforsøk
+
+[Forsøk 01: Tilgangskart](../specs/001-role-package-map/README.md) samler den første
+gjennomføringen i repoet, med krav, plan, analysefunn, kode, testresultater og
+gjenstående manuell akseptanse. Issue #29 og under-issuene #30–#35 følger arbeidet.

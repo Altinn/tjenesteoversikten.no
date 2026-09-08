@@ -384,3 +384,11 @@ export interface PolicyStatistics {
   altinn2RoleOnlyWithoutErRolesCount: number;
   altinn2RoleOnlyGroups: PolicyAltinn2RoleOnlyGroup[];
 }
+
+export interface RoleMapContext { code: string; description?: string | null; kind: 'person' | 'organization' }
+export type RoleMapError = 'upstream_http_error' | 'upstream_timeout' | 'invalid_upstream_payload' | 'context_catalog_unavailable';
+export interface RolePackageMapDto {
+  environment: 'prod' | 'tt02'; role: RoleDto; selectedVariant: string; status: 'complete' | 'partial' | 'failed';
+  contextDiscovery: { source: 'person-and-organization-subtypes'; status: 'complete' | 'failed'; items: RoleMapContext[]; errorCode: RoleMapError | null };
+  selection: { status: 'complete'; packages: PackageDto[]; packageCount: number; errorCode: null } | { status: 'failed' | 'unavailable'; packages: null; packageCount: null; errorCode: RoleMapError };
+}

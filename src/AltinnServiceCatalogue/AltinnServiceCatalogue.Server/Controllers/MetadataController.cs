@@ -9,7 +9,7 @@ namespace AltinnServiceCatalogue.Server.Controllers;
 
 [ApiController]
 [Route("api/v1/{environment}/meta")]
-public class MetadataController(
+public partial class MetadataController(
     IMetadataClient client,
     IOptions<MetadataOptions> options,
     ILogger<MetadataController> logger) : ControllerBase

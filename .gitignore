@@ -354,3 +354,9 @@ devenv.lock
 
 # Local Spec Kit CLI environment (recreate using docs/spec-kit.md)
 .venv-speckit/
+
+# Frontend builds and browser test artifacts
+dist/
+playwright-report/
+test-results/
+.env*

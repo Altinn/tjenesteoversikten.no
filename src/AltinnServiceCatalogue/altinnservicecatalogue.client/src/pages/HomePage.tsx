@@ -1,3 +1,4 @@
+import CatalogueNavigation from '../components/CatalogueNavigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, PolicyStatistics as PolicyStatisticsData, ResourceSummary, RoleDto } from '../types';
@@ -8,7 +9,6 @@ import { useEnv } from '../env';
 import { useLang } from '../lang';
 import { getResourceTypeColor } from '../resourceTypes';
 const TAB_PATHS: Record<string, string> = { '/': 'owners', '/owners': 'owners', '/types': 'types', '/packages': 'packages', '/roles': 'roles', '/keywords': 'keywords', '/statistics': 'statistics', '/search': 'search' };
-const TAB_ROUTES: Record<string, string> = { owners: '/owners', types: '/types', packages: '/packages', roles: '/roles', keywords: '/keywords', statistics: '/statistics', search: '/search' };
 type Dataset = 'orgs' | 'resources' | 'groups' | 'roles' | 'keywords';
 
 function SearchIcon() { return <svg className="search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.8-3.8" /></svg>; }
@@ -129,7 +129,7 @@ export default function HomePage() {
     </section>
 
     <section className="catalogue-section">
-      <div className="tabs-scroll section-inner"><nav className="catalogue-tabs">{Object.entries(copy.tabs).map(([key, label]) => <button key={key} className={activeTab === key ? 'active' : ''} onClick={() => navigate(TAB_ROUTES[key])}>{label}</button>)}</nav></div>
+      <CatalogueNavigation />
       <div className="tab-content section-inner">
         {error && <div className="notice">{copy.loadError} ({error}).</div>}
         {activeTab === 'owners' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.owners} /><div className="owner-grid">{owners.map(({ code, org }) => <Link className="owner-card" to={`/org/${code}`} key={code}><OwnerLogo org={org} code={code} lang={lang} /><strong>{getText(org.name, lang)}</strong><span>{format(ownerCounts[code.toLowerCase()] ?? 0)} {copy.services}</span></Link>)}</div></>}

@@ -23,13 +23,13 @@ export function packagePath(pkg: { id: string; urn?: string | null }): string {
  * attaching nameEn/descriptionEn to each group, area, and package. English is nice-to-have:
  * if that fetch fails, the Norwegian export is returned as-is.
  */
-export async function fetchPackageGroupsBilingual(env: string): Promise<AreaGroupDto[]> {
+export async function fetchPackageGroupsBilingual(env: string, signal?: AbortSignal): Promise<AreaGroupDto[]> {
   const [nbGroups, enGroups] = await Promise.all([
-    fetch(`/api/v1/${env}/meta/info/accesspackages/export`).then((res) => {
+    fetch(`/api/v1/${env}/meta/info/accesspackages/export`, { signal }).then((res) => {
       if (!res.ok) throw new Error(`Failed to fetch packages: ${res.status}`);
       return res.json() as Promise<AreaGroupDto[]>;
     }),
-    fetch(`/api/v1/${env}/meta/info/accesspackages/export?language=eng`)
+    fetch(`/api/v1/${env}/meta/info/accesspackages/export?language=eng`, { signal })
       .then((res) => (res.ok ? (res.json() as Promise<AreaGroupDto[]>) : null))
       .catch(() => null),
   ]);
@@ -125,8 +125,8 @@ export function buildPackageLookup(groups: AreaGroupDto[]): Map<string, PackageD
   return lookup;
 }
 
-export async function fetchPackageLookupBilingual(env: string): Promise<Map<string, PackageDto>> {
-  return buildPackageLookup(await fetchPackageGroupsBilingual(env));
+export async function fetchPackageLookupBilingual(env: string, signal?: AbortSignal): Promise<Map<string, PackageDto>> {
+  return buildPackageLookup(await fetchPackageGroupsBilingual(env, signal));
 }
 
 /** Add bilingual display text and export metadata to a package returned by another endpoint. */

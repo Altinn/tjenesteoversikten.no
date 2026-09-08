@@ -10,6 +10,7 @@ import KeywordPage from './pages/KeywordPage';
 import AboutPage from './pages/AboutPage';
 import DelegationWizardPage from './pages/DelegationWizardPage';
 import SearchResultsPage from './pages/SearchResultsPage';
+import AccessMapPage from './pages/AccessMapPage';
 import './App.css';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="types" element={<HomePage />} />
         <Route path="packages" element={<HomePage />} />
         <Route path="roles" element={<HomePage />} />
+        <Route path="access-map" element={<AccessMapPage />} />
         <Route path="keywords" element={<HomePage />} />
         <Route path="statistics" element={<HomePage />} />
         <Route path="keyword/:word" element={<KeywordPage />} />
