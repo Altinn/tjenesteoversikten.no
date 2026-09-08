@@ -4,7 +4,7 @@ import { useLang } from '../lang';
 import { useEnv } from '../env';
 import { useTheme } from '../theme';
 
-const HOME_PATHS = new Set(['/', '/owners', '/types', '/packages', '/roles', '/keywords', '/statistics', '/search']);
+const HOME_PATHS = new Set(['/', '/owners', '/types', '/packages', '/roles', '/keywords', '/statistics', '/search', '/access-map']);
 
 function Brand() {
   return (

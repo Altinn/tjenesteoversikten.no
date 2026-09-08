@@ -6,5 +6,6 @@
   </Project>
   <Project Path="AltinnServiceCatalogue.McpServer/AltinnServiceCatalogue.McpServer.csproj" />
   <Project Path="AltinnServiceCatalogue.PolicyStatistics/AltinnServiceCatalogue.PolicyStatistics.csproj" />
+  <Project Path="AltinnServiceCatalogue.Server.Tests/AltinnServiceCatalogue.Server.Tests.csproj" />
   <Project Path="AltinnServiceCatalogue.Server/AltinnServiceCatalogue.Server.csproj" />
 </Solution>

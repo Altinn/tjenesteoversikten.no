@@ -172,3 +172,25 @@ Dev-porter:
 - Frontend: `https://localhost:64497`
 
 Vite proxyer `/api` til backend, som igjen proxyer mot Altinn.
+
+## Spesifikasjonsdrevet utvikling
+
+Repoet er satt opp med GitHub Spec Kit for Codex. Se [bruksveiledningen](docs/spec-kit.md)
+for arbeidsflyten fra spesifikasjon til implementasjon og installasjon av CLI-verktøyet.
+
+## Tilgangskart
+
+Åpne **Tilgangskart** fra katalogens seksjonsmeny, eller gå til /access-map.
+Velg en rolle og en kontekst for å se hvilke tilgangspakker rollen gir, gruppert
+som et tre etter område. Rolle- og pakkekort åpner eksisterende detaljsider.
+Tilbakeknappen bevarer søk og åpne områder i samme miljø. Miljøbytte nullstiller
+søk/områder og validerer valget på nytt. Visningen gjelder offentlige katalogdata,
+ikke innlogget brukers rettigheter.
+
+[Oppsett og testkommandoer](specs/001-role-package-map/quickstart.md) og
+[valideringsstatus](specs/001-role-package-map/validation.md) beskriver backend- og
+nettlesertestene. Faktisk skjermleserprøve og fempersoners brukertest gjenstår.
+
+Frontendens eslint-suppressions.json registrerer 24 eksisterende lintfeil som en
+avgrenset baseline. Nye kartfiler er ikke unntatt. npm run lint og CI håndhever
+fortsatt reglene; gammel lintgjeld er dokumentert i valideringsrapporten.

@@ -1,0 +1,42 @@
+{
+  "src/components/ResourceTypeTag.tsx": {
+    "react-refresh/only-export-components": {
+      "count": 1
+    }
+  },
+  "src/env.tsx": {
+    "react-refresh/only-export-components": {
+      "count": 1
+    }
+  },
+  "src/helpers.tsx": {
+    "react-refresh/only-export-components": {
+      "count": 13
+    }
+  },
+  "src/lang.tsx": {
+    "react-refresh/only-export-components": {
+      "count": 1
+    }
+  },
+  "src/pages/HomePage.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "src/pages/PackagePage.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 2
+    }
+  },
+  "src/pages/ResourcePage.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 4
+    }
+  },
+  "src/theme.tsx": {
+    "react-refresh/only-export-components": {
+      "count": 1
+    }
+  }
+}

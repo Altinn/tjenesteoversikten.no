@@ -7,7 +7,7 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace AltinnServiceCatalogue.Server.Services;
 
-public class MetadataClient(
+public partial class MetadataClient(
     IHttpClientFactory httpClientFactory,
     IMemoryCache cache,
     ILogger<MetadataClient> logger) : IMetadataClient

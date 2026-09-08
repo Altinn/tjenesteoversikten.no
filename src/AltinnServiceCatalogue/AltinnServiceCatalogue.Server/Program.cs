@@ -74,3 +74,5 @@ app.MapControllers();
 app.MapFallbackToFile("/index.html", spaStaticFiles);
 
 app.Run();
+
+public partial class Program { }
