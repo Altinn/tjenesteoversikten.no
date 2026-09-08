@@ -56,3 +56,15 @@ Full-stack web app for browsing/searching public digital services (Altinn ecosys
   reports fetch and parse failures separately, and caps the non-default drilldown at 500 resources.
 - Web aggregates are coalesced and cached in `IMemoryCache` for 30 minutes.
 - MCP tool: `get_policy_statistics`; like every MCP tool it defaults to production unless `tt02` is explicit.
+
+## Spec Kit
+
+- GitHub Spec Kit 1.0.4 is configured for Codex with PowerShell scripts.
+- Project principles: `.specify/memory/constitution.md`. Read them when specifying,
+  planning, or implementing a feature through Spec Kit.
+- Codex skills: `.agents/skills/speckit-*/`; invoke with `$speckit-specify`,
+  `$speckit-plan`, `$speckit-tasks`, etc. See `docs/spec-kit.md` for the workflow.
+- Feature artifacts are created under `specs/`. Start with a bounded change and use
+  the existing implementation as context.
+- The local CLI lives in `.venv-speckit/Scripts/specify.exe` (Git-ignored).
+- The optional Git extension is not installed; keep the existing branch workflow.

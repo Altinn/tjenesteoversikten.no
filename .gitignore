@@ -351,3 +351,6 @@ MigrationBackup/
 # Devenv
 .devenv/
 devenv.lock
+
+# Local Spec Kit CLI environment (recreate using docs/spec-kit.md)
+.venv-speckit/

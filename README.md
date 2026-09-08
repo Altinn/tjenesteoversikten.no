@@ -172,3 +172,8 @@ Dev-porter:
 - Frontend: `https://localhost:64497`
 
 Vite proxyer `/api` til backend, som igjen proxyer mot Altinn.
+
+## Spesifikasjonsdrevet utvikling
+
+Repoet er satt opp med GitHub Spec Kit for Codex. Se [bruksveiledningen](docs/spec-kit.md)
+for arbeidsflyten fra spesifikasjon til implementasjon og installasjon av CLI-verktøyet.
