@@ -8,6 +8,7 @@ import PackagePage from './pages/PackagePage';
 import RolePage from './pages/RolePage';
 import KeywordPage from './pages/KeywordPage';
 import AboutPage from './pages/AboutPage';
+import DataSourcesPage from './pages/DataSourcesPage';
 import DelegationWizardPage from './pages/DelegationWizardPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import AccessMapPage from './pages/AccessMapPage';
@@ -35,6 +36,7 @@ function App() {
         <Route path="results" element={<SearchResultsPage />} />
         <Route path="wizard" element={<DelegationWizardPage />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="about/data" element={<DataSourcesPage />} />
       </Route>
     </Routes>
   );
