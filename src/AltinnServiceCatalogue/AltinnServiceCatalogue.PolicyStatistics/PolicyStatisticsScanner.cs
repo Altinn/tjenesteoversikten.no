@@ -121,8 +121,13 @@ public static class PolicyStatisticsScanner
                         var otherAltinn2RoleCodes = migrationRelevantRoleCodes
                             .Except(erRoleCodes, StringComparer.OrdinalIgnoreCase)
                             .ToArray();
+                        // PRIV persists and still grants access to private individuals. Exclude
+                        // resources with PRIV from the no-ER migration list, even when other
+                        // legacy Altinn 2 roles are also present.
+                        var hasPrivRole = altinn2RoleCodes.Contains("PRIV", StringComparer.OrdinalIgnoreCase);
                         var altinn2RoleOnlyResource = migrationRelevantRoleCodes.Length > 0
                             && accessPackageValues.Length == 0
+                            && (erRoleCodes.Length > 0 || !hasPrivRole)
                             && !string.Equals(resource.ResourceType, Altinn2ServiceResourceType, StringComparison.OrdinalIgnoreCase)
                                 ? new PolicyAltinn2RoleOnlyResourceDto(
                                     resourceId,
