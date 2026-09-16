@@ -1,4 +1,5 @@
 import CatalogueNavigation from '../components/CatalogueNavigation';
+import PackageResourcesDownload from '../components/PackageResourcesDownload';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, PolicyStatistics as PolicyStatisticsData, ResourceSummary, RoleDto } from '../types';
@@ -135,6 +136,7 @@ export default function HomePage() {
         {activeTab === 'owners' && <><Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.owners} /><div className="owner-grid">{owners.map(({ code, org }) => <Link className="owner-card" to={`/org/${code}`} key={code}><OwnerLogo org={org} code={code} lang={lang} /><strong>{getText(org.name, lang)}</strong><span>{format(ownerCounts[code.toLowerCase()] ?? 0)} {copy.services}</span></Link>)}</div></>}
         {activeTab === 'types' && <><Distribution stats={typeStats} /><div className="type-grid">{typeStats.map(([type, count]) => <Link to={`/type/${encodeURIComponent(type)}`} className="type-card" key={type}><div><i style={{ background: getResourceTypeColor(type) }} /><strong>{type}</strong></div><b>{format(count)}</b><p>{lang === 'nb' ? `Registrerte tjenester av typen ${type}.` : `Registered services of type ${type}.`}</p></Link>)}</div></>}
         {activeTab === 'packages' && <>
+          <PackageResourcesDownload key={env} env={env} />
           <Filter value={filterQuery} setValue={setFilterQuery} placeholder={copy.filters.packages} />
           {q ? (
             <PackageLinks items={matchingPackages} lang={lang} heading={`${format(matchingPackages.length)} ${copy.results}`} />

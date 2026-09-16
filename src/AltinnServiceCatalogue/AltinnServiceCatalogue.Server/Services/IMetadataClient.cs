@@ -11,6 +11,7 @@ public interface IMetadataClient
     Task<List<RoleDto>> GetRoleMapOptionsAsync(string baseUrl, CancellationToken ct);
     Task<RolePackageMapDto> GetRolePackageMapAsync(string baseUrl, string environment, Guid id, string variant, CancellationToken ct);
     // Packages
+    Task<byte[]> ExportPackageResourcesCsvAsync(string baseUrl, CancellationToken ct = default);
     Task<List<SearchObjectOfPackageDto>> SearchPackagesAsync(string baseUrl, string? term, string[]? resourceProviderCode, bool? searchInResources, string? typeName, CancellationToken ct = default);
     Task<List<AreaGroupDto>> ExportPackagesAsync(string baseUrl, string? language = null, CancellationToken ct = default);
     Task<List<AreaGroupDto>> GetGroupsAsync(string baseUrl, CancellationToken ct = default);
