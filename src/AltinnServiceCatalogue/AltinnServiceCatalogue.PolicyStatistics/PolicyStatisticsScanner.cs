@@ -16,6 +16,7 @@ public static class PolicyStatisticsScanner
     private const string AccessPackageAttributeId = "urn:altinn:accesspackage";
     private const string Altinn2RoleAttributeId = "urn:altinn:rolecode";
     private const string Altinn2ServiceResourceType = "Altinn2Service";
+    private const string MigratedAppResourceType = "MigratedApp";
     private static readonly HashSet<string> PersistentSelfRepresentationRoleCodes =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -122,6 +123,7 @@ public static class PolicyStatisticsScanner
                             .Except(erRoleCodes, StringComparer.OrdinalIgnoreCase)
                             .ToArray();
                         var altinn2RoleResource = otherAltinn2RoleCodes.Length > 0
+                            && !string.Equals(resource.ResourceType, MigratedAppResourceType, StringComparison.OrdinalIgnoreCase)
                             ? new PolicyAltinn2RoleResourceDto(
                                 resourceId,
                                 resource.Title,

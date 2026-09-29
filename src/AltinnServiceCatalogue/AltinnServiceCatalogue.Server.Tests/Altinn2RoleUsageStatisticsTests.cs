@@ -40,6 +40,15 @@ public class Altinn2RoleUsageStatisticsTests
     }
 
     [Fact]
+    public async Task Excludes_migrated_apps_even_with_roles_being_phased_out()
+    {
+        var result = await ScanAsync(CreatePolicy(["UTIN"]), "MigratedApp");
+
+        Assert.Equal(0, result.Altinn2RoleResourceCount);
+        Assert.Empty(result.Altinn2RoleGroups);
+    }
+
+    [Fact]
     public async Task Includes_resources_that_also_have_access_packages()
     {
         var result = await ScanAsync(CreatePolicy(["UTIN"], ["skattegrunnlag"]));
@@ -51,7 +60,7 @@ public class Altinn2RoleUsageStatisticsTests
         Assert.Equal(["UTIN"], resource.Altinn2RoleCodes);
     }
 
-    private static Task<PolicyStatisticsDto> ScanAsync(string policyXml)
+    private static Task<PolicyStatisticsDto> ScanAsync(string policyXml, string resourceType = "AltinnApp")
     {
         var metadata = new[]
         {
@@ -60,7 +69,7 @@ public class Altinn2RoleUsageStatisticsTests
                 new Dictionary<string, string> { ["nb"] = "Test" },
                 "owner",
                 new Dictionary<string, string> { ["nb"] = "Owner" },
-                "AltinnApp")
+                resourceType)
         };
 
         return PolicyStatisticsScanner.ScanAsync(
