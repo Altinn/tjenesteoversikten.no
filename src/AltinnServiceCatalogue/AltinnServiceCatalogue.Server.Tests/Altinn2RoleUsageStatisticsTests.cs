@@ -6,20 +6,37 @@ namespace AltinnServiceCatalogue.Server.Tests;
 public class Altinn2RoleUsageStatisticsTests
 {
     [Theory]
-    [InlineData("UTIN")]
-    [InlineData("PRIV,UTIN")]
-    [InlineData("SELN,UTIN")]
-    [InlineData("PRIV,DAGL")]
-    public async Task Includes_every_resource_with_at_least_one_altinn2_role(string roleList)
+    [InlineData("UTIN", "UTIN")]
+    [InlineData("PRIV,UTIN", "UTIN")]
+    [InlineData("SELN,UTIN", "UTIN")]
+    [InlineData("DAGL,UTIN", "UTIN")]
+    [InlineData("PRIV,DAGL,UTIN", "UTIN")]
+    public async Task Includes_resources_with_at_least_one_role_being_phased_out(
+        string roleList,
+        string expectedRoleList)
     {
         var result = await ScanAsync(CreatePolicy(roleList.Split(',')));
 
         Assert.Equal(1, result.Altinn2RoleResourceCount);
         var resource = Assert.Single(Assert.Single(result.Altinn2RoleGroups).Resources);
         Assert.Equal(
-            roleList.Split(',').OrderBy(static code => code, StringComparer.OrdinalIgnoreCase),
+            expectedRoleList.Split(',').OrderBy(static code => code, StringComparer.OrdinalIgnoreCase),
             resource.Altinn2RoleCodes);
         Assert.False(resource.HasAccessPackages);
+    }
+
+    [Theory]
+    [InlineData("PRIV")]
+    [InlineData("SELN")]
+    [InlineData("DAGL")]
+    [InlineData("PRIV,DAGL")]
+    [InlineData("SELN,DAGL")]
+    public async Task Excludes_resources_with_only_persistent_or_er_roles(string roleList)
+    {
+        var result = await ScanAsync(CreatePolicy(roleList.Split(',')));
+
+        Assert.Equal(0, result.Altinn2RoleResourceCount);
+        Assert.Empty(result.Altinn2RoleGroups);
     }
 
     [Fact]

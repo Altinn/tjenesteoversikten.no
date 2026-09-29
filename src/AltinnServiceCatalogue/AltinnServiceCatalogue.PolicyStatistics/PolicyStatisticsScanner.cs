@@ -112,16 +112,6 @@ public static class PolicyStatisticsScanner
                         var altinn2RoleCodes = ExtractSubjectValues(document, Altinn2RoleAttributeId)
                             .Select(static code => code.ToUpperInvariant())
                             .ToArray();
-                        var altinn2RoleResource = altinn2RoleCodes.Length > 0
-                            ? new PolicyAltinn2RoleResourceDto(
-                                resourceId,
-                                resource.Title,
-                                resource.OwnerId,
-                                resource.OwnerName,
-                                resource.ResourceType,
-                                altinn2RoleCodes,
-                                accessPackageValues.Length > 0)
-                            : null;
                         var migrationRelevantRoleCodes = altinn2RoleCodes
                             .Where(static code => !PersistentSelfRepresentationRoleCodes.Contains(code))
                             .ToArray();
@@ -131,6 +121,18 @@ public static class PolicyStatisticsScanner
                         var otherAltinn2RoleCodes = migrationRelevantRoleCodes
                             .Except(erRoleCodes, StringComparer.OrdinalIgnoreCase)
                             .ToArray();
+                        var altinn2RoleResource = otherAltinn2RoleCodes.Length > 0
+                            ? new PolicyAltinn2RoleResourceDto(
+                                resourceId,
+                                resource.Title,
+                                resource.OwnerId,
+                                resource.OwnerName,
+                                resource.ResourceType,
+                                otherAltinn2RoleCodes,
+                                accessPackageValues.Length > 0)
+                            : null;
+                        // Only delegated Altinn 2 roles being phased out qualify for this overview.
+                        // ER roles and persistent self-representation roles do not qualify on their own.
                         // PRIV persists and still grants access to private individuals. Exclude
                         // resources with PRIV from the no-ER migration list, even when other
                         // legacy Altinn 2 roles are also present.
