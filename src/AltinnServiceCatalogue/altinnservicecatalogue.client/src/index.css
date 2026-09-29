@@ -165,6 +165,7 @@ a { color:var(--t-accent); }
 .statistics-description { max-width:820px; margin:-8px 0 12px; color:var(--t-muted); font-size:13.5px; line-height:1.55; }
 .role-category-list { display:grid; gap:22px; margin-bottom:32px; }
 .role-category-section { padding:20px; border:1px solid var(--t-line); border-left-width:4px; border-radius:14px; background:var(--t-surface); }
+.role-category-section[data-category="all-a2"] { margin-bottom:32px; border-left-color:#4098e8; }
 .role-category-section[data-category="without-er"] { border-left-color:#d96a6a; }
 .role-category-section[data-category="with-er"] { border-left-color:#37c08b; }
 .role-category-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:12px; }

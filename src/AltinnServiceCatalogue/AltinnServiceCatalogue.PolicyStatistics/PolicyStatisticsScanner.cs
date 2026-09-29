@@ -112,6 +112,16 @@ public static class PolicyStatisticsScanner
                         var altinn2RoleCodes = ExtractSubjectValues(document, Altinn2RoleAttributeId)
                             .Select(static code => code.ToUpperInvariant())
                             .ToArray();
+                        var altinn2RoleResource = altinn2RoleCodes.Length > 0
+                            ? new PolicyAltinn2RoleResourceDto(
+                                resourceId,
+                                resource.Title,
+                                resource.OwnerId,
+                                resource.OwnerName,
+                                resource.ResourceType,
+                                altinn2RoleCodes,
+                                accessPackageValues.Length > 0)
+                            : null;
                         var migrationRelevantRoleCodes = altinn2RoleCodes
                             .Where(static code => !PersistentSelfRepresentationRoleCodes.Contains(code))
                             .ToArray();
@@ -151,6 +161,7 @@ public static class PolicyStatisticsScanner
                                 hasCondition,
                                 usesPolicyAlgorithm,
                                 legacyIncorrect),
+                            altinn2RoleResource,
                             altinn2RoleOnlyResource));
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -179,6 +190,31 @@ public static class PolicyStatisticsScanner
             .Select(static group => new PolicyAlgorithmUsageDto(group.Key.Algorithm, group.Key.AlgorithmKind, group.Count()))
             .OrderByDescending(static usage => usage.Count)
             .ThenBy(static usage => usage.Algorithm, StringComparer.Ordinal)
+            .ToArray();
+        var altinn2RoleResources = outcomes
+            .Where(static outcome => outcome.Altinn2RoleResource is not null)
+            .Select(static outcome => outcome.Altinn2RoleResource!)
+            .OrderBy(static resource => resource.OwnerId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static resource => resource.ResourceType, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static resource => resource.ResourceId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var altinn2RoleGroups = altinn2RoleResources
+            .GroupBy(
+                static resource => $"{resource.OwnerId}\u001f{resource.ResourceType}",
+                StringComparer.OrdinalIgnoreCase)
+            .Select(static group =>
+            {
+                var first = group.First();
+                var groupedResources = group.ToArray();
+                return new PolicyAltinn2RoleGroupDto(
+                    first.OwnerId,
+                    first.OwnerName,
+                    first.ResourceType,
+                    groupedResources.Length,
+                    groupedResources);
+            })
+            .OrderBy(static group => group.OwnerId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static group => group.ResourceType, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var altinn2RoleOnlyResources = outcomes
             .Where(static outcome => outcome.Altinn2RoleOnlyResource is not null)
@@ -227,6 +263,8 @@ public static class PolicyStatisticsScanner
             nonDefault.Length,
             nonDefault.Length > NonDefaultResourceLimit,
             nonDefault.Take(NonDefaultResourceLimit).ToArray(),
+            altinn2RoleResources.Length,
+            altinn2RoleGroups,
             altinn2RoleOnlyResources.Length,
             altinn2RoleOnlyResources.Count(static resource => resource.ErRoleCodes.Count > 0),
             altinn2RoleOnlyResources.Count(static resource => resource.ErRoleCodes.Count == 0),
@@ -266,14 +304,16 @@ public static class PolicyStatisticsScanner
     private sealed record ScanOutcome(
         OutcomeKind Kind,
         PolicyResourceStatisticsDto? PolicyStatistics,
+        PolicyAltinn2RoleResourceDto? Altinn2RoleResource,
         PolicyAltinn2RoleOnlyResourceDto? Altinn2RoleOnlyResource)
     {
         public static ScanOutcome Policy(
             PolicyResourceStatisticsDto statistics,
+            PolicyAltinn2RoleResourceDto? altinn2RoleResource,
             PolicyAltinn2RoleOnlyResourceDto? altinn2RoleOnlyResource) =>
-            new(OutcomeKind.Policy, statistics, altinn2RoleOnlyResource);
-        public static ScanOutcome NoPolicy(string _) => new(OutcomeKind.NoPolicy, null, null);
-        public static ScanOutcome FetchFailure(string _) => new(OutcomeKind.FetchFailure, null, null);
-        public static ScanOutcome ParseFailure(string _) => new(OutcomeKind.ParseFailure, null, null);
+            new(OutcomeKind.Policy, statistics, altinn2RoleResource, altinn2RoleOnlyResource);
+        public static ScanOutcome NoPolicy(string _) => new(OutcomeKind.NoPolicy, null, null, null);
+        public static ScanOutcome FetchFailure(string _) => new(OutcomeKind.FetchFailure, null, null, null);
+        public static ScanOutcome ParseFailure(string _) => new(OutcomeKind.ParseFailure, null, null, null);
     }
 }
