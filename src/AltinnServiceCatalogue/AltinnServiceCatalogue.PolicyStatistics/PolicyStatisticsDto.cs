@@ -9,6 +9,22 @@ public sealed record PolicyResourceMetadataDto(
 
 public sealed record PolicyAlgorithmUsageDto(string Algorithm, string Kind, int Count);
 
+public sealed record PolicyAltinn2RoleResourceDto(
+    string ResourceId,
+    IReadOnlyDictionary<string, string> Title,
+    string OwnerId,
+    IReadOnlyDictionary<string, string> OwnerName,
+    string ResourceType,
+    IReadOnlyList<string> Altinn2RoleCodes,
+    bool HasAccessPackages);
+
+public sealed record PolicyAltinn2RoleGroupDto(
+    string OwnerId,
+    IReadOnlyDictionary<string, string> OwnerName,
+    string ResourceType,
+    int ResourceCount,
+    IReadOnlyList<PolicyAltinn2RoleResourceDto> Resources);
+
 public sealed record PolicyAltinn2RoleOnlyResourceDto(
     string ResourceId,
     IReadOnlyDictionary<string, string> Title,
@@ -58,6 +74,8 @@ public sealed record PolicyStatisticsDto(
     int NonDefaultResourceCount,
     bool NonDefaultResourcesCapped,
     IReadOnlyList<PolicyResourceStatisticsDto> NonDefaultResources,
+    int Altinn2RoleResourceCount,
+    IReadOnlyList<PolicyAltinn2RoleGroupDto> Altinn2RoleGroups,
     int Altinn2RoleOnlyResourceCount,
     int Altinn2RoleOnlyWithErRolesCount,
     int Altinn2RoleOnlyWithoutErRolesCount,

@@ -226,6 +226,13 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
     fetchFailures: 'hentefeil',
     parseFailures: 'tolkefeil',
     duration: 'skannetid',
+    roleUsageTitle: 'Tjenester med Altinn 2-roller',
+    roleUsageDescription: 'Alle tjenester der policyen inneholder minst én Altinn 2-rolle. Oversikten inkluderer også tjenester som har tilgangspakker, rene Altinn 2-tjenester og tjenester med PRIV/SELN.',
+    roleUsageResources: 'tjenester med Altinn 2-roller',
+    roleUsageGroups: 'eier-/typegrupper',
+    altinn2Roles: 'Altinn 2-roller',
+    hasAccessPackages: 'Har tilgangspakke',
+    noAccessPackages: 'Ingen tilgangspakke',
     migrationTitle: 'Tjenester uten tilgangspakker',
     migrationDescription: 'Tjenester med legacy rollekoder i policyen, men ingen tilgangspakker. Rene Altinn 2-tjenester, tjenester som bare har PRIV/SELN og tjenester uten ER-roller som også har PRIV, er ikke med.',
     migrationResources: 'tjenester',
@@ -261,6 +268,13 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
     fetchFailures: 'fetch failures',
     parseFailures: 'parse failures',
     duration: 'scan duration',
+    roleUsageTitle: 'Services with Altinn 2 roles',
+    roleUsageDescription: 'All services whose policy contains at least one Altinn 2 role. This includes services that also have access packages, pure Altinn 2 services, and services using PRIV/SELN.',
+    roleUsageResources: 'services with Altinn 2 roles',
+    roleUsageGroups: 'owner/type groups',
+    altinn2Roles: 'Altinn 2 roles',
+    hasAccessPackages: 'Has access package',
+    noAccessPackages: 'No access package',
     migrationTitle: 'Services without access packages',
     migrationDescription: 'Services with legacy role codes in the policy, but no access packages. Pure Altinn 2 services, services that only use PRIV/SELN, and services without ER roles that also use PRIV are excluded.',
     migrationResources: 'services',
@@ -315,6 +329,11 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
     [text.conditions, statistics.policiesWithConditions, '#4098E8'],
     [text.legacy, statistics.legacyIncorrectEvaluationCount, '#C23B53'],
   ];
+  const altinn2RoleGroups = [...(statistics.altinn2RoleGroups ?? [])].sort((left, right) => {
+    const leftOwner = getText(left.ownerName, lang) || left.ownerId;
+    const rightOwner = getText(right.ownerName, lang) || right.ownerId;
+    return leftOwner.localeCompare(rightOwner, lang) || left.resourceType.localeCompare(right.resourceType, lang);
+  });
   const altinn2RoleOnlyGroups = [...(statistics.altinn2RoleOnlyGroups ?? [])].sort((left, right) => {
     const leftOwner = getText(left.ownerName, lang) || left.ownerId;
     const rightOwner = getText(right.ownerName, lang) || right.ownerId;
@@ -363,6 +382,32 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
         <span>{format(statistics.scanDurationMilliseconds)} ms {text.duration}</span>
       </div>
     </article>
+    <section className="role-category-section" data-category="all-a2" aria-labelledby="altinn2-role-usage-title">
+      <header className="role-category-header">
+        <div><h3 id="altinn2-role-usage-title">{text.roleUsageTitle}</h3><p>{text.roleUsageDescription}</p></div>
+        <strong>{format(statistics.altinn2RoleResourceCount)}</strong>
+      </header>
+      <div className="results-count">{format(statistics.altinn2RoleResourceCount)} {text.roleUsageResources} · {format(altinn2RoleGroups.length)} {text.roleUsageGroups}</div>
+      <div className="statistics-group-list">{altinn2RoleGroups.map((group) => {
+        const ownerName = getText(group.ownerName, lang) || group.ownerId || text.unknownOwner;
+        return <details key={'all-a2:' + group.ownerId + ':' + group.resourceType}>
+          <summary>
+            <span className="statistics-group-owner"><strong>{ownerName}</strong>{group.ownerId && <small>{group.ownerId}</small>}</span>
+            <span className={'type-chip type-' + group.resourceType}>{group.resourceType}</span>
+            <strong className="statistics-group-count">{format(group.resourceCount)}</strong>
+          </summary>
+          <div className="result-list">{group.resources.map((resource) => <Link to={'/resource/' + encodeURIComponent(resource.resourceId)} key={resource.resourceId}>
+            <span className="type-chip">A2</span>
+            <div><strong>{getText(resource.title, lang) || resource.resourceId}</strong><p>{resource.resourceId}</p></div>
+            <small className="role-breakdown">
+              <span><b>{text.altinn2Roles}:</b> {resource.altinn2RoleCodes.join(', ')}</span>
+              <span>{resource.hasAccessPackages ? text.hasAccessPackages : text.noAccessPackages}</span>
+            </small>
+            <span className="chevron">›</span>
+          </Link>)}</div>
+        </details>;
+      })}</div>
+    </section>
     <h3 id="altinn2-role-only-title">{text.migrationTitle}</h3>
     <p className="statistics-description">{text.migrationDescription}</p>
     <div className="results-count">{format(statistics.altinn2RoleOnlyResourceCount)} {text.migrationResources}</div>
