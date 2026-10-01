@@ -25,7 +25,7 @@ export function retiredLabel(info: ServiceVisibility | undefined | null, notVisi
   return info?.status ?? notVisibleText;
 }
 
-/** Split a list into the services shown by default and the hidden/retired ones kept behind a toggle. */
+/** Omit invisible services and split the rest into current and retired services. */
 export function splitRetired<T>(
   items: T[],
   lookup: (item: T) => ServiceVisibility | undefined | null,
@@ -33,7 +33,9 @@ export function splitRetired<T>(
   const active: T[] = [];
   const retired: T[] = [];
   for (const item of items) {
-    (isRetiredService(lookup(item)) ? retired : active).push(item);
+    const visibility = lookup(item);
+    if (visibility?.visible === false) continue;
+    (isRetiredService(visibility) ? retired : active).push(item);
   }
   return { active, retired };
 }

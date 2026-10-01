@@ -72,7 +72,7 @@ export default function HomePage() {
       fetchJson<OrgList>(`/api/v1/${env}/resource/orgs`)
         .then((data) => apply<Record<string, Org>>('orgs', setOrgs)(data.orgs ?? {})),
       fetchJson<ResourceSummary[]>(`/api/v1/${env}/resource/resourcelist/summary?includeApps=true&includeAltinn2=true`)
-        .then(apply('resources', setResources)),
+        .then((data) => apply('resources', setResources)(data.filter((resource) => resource.visible !== false))),
       fetchPackageGroupsBilingual(env)
         .then(apply('groups', setGroups)),
       fetchJson<RoleDto[]>(`/api/v1/${env}/meta/info/roles`)
