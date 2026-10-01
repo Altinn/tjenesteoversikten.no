@@ -350,16 +350,16 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // Hidden / retired services
   'retired.notice.package': {
-    nb: 'Tilgangspakken gir også tilgang til {count} tjenester som er skjult eller ikke lenger aktive.',
-    en: 'This access package also grants access to {count} services that are hidden or no longer active.',
+    nb: 'Tilgangspakken gir også tilgang til {count} tjenester som ikke lenger er aktive.',
+    en: 'This access package also grants access to {count} services that are no longer active.',
   },
   'retired.notice.role': {
-    nb: 'Rollen gir også tilgang til {count} tjenester som er skjult eller ikke lenger aktive.',
-    en: 'This role also grants access to {count} services that are hidden or no longer active.',
+    nb: 'Rollen gir også tilgang til {count} tjenester som ikke lenger er aktive.',
+    en: 'This role also grants access to {count} services that are no longer active.',
   },
   'retired.notice.list': {
-    nb: '{count} tjenester er skjult her fordi de ikke er synlige eller ikke lenger er aktive.',
-    en: '{count} services are left out here because they are hidden or no longer active.',
+    nb: '{count} tjenester er skjult her fordi de ikke lenger er aktive.',
+    en: '{count} services are left out here because they are no longer active.',
   },
   'retired.show': { nb: 'Vis dem', en: 'Show them' },
   'retired.hide': { nb: 'Skjul dem igjen', en: 'Hide them again' },

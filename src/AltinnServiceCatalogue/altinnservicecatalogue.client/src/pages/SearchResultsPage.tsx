@@ -59,7 +59,7 @@ export default function SearchResultsPage() {
       fetchPackageGroupsBilingual(env),
     ])
       .then(([resourceData, groupData]) => {
-        setResources(resourceData);
+        setResources(resourceData.filter((resource) => resource.visible !== false));
         setGroups(groupData);
       })
       .catch((err) => {
