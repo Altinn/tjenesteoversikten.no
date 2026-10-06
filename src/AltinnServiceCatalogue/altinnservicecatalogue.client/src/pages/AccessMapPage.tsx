@@ -20,7 +20,7 @@ export default function AccessMapPage() {
   const { roles, rolesError, data, error, retry } = useRolePackageMap(env, state.role, state.variant);
   const groups = useMemo(() => groupPackages(data?.selection.packages ?? [], lang, t('accessMap.ungrouped')), [data, lang, t]);
   const visible = filterGroups(groups, state.q, lang);
-  const filteredRoles = (roles ?? []).filter(r => `${roleName(r)} ${r.code ?? ''}`.toLocaleLowerCase(lang).includes(roleQuery.trim().toLocaleLowerCase(lang)));
+  const filteredRoles = (roles ?? []).filter(r => `${roleName(r)} ${r.code ?? ''} ${r.legacyRoleCode ?? ''}`.toLocaleLowerCase(lang).includes(roleQuery.trim().toLocaleLowerCase(lang)));
   const selectedRole = roles?.find(r => r.id.toLowerCase() === state.role);
   const options = selectedRole && !filteredRoles.includes(selectedRole) ? [selectedRole, ...filteredRoles] : filteredRoles;
   const open = state.custom ? state.open : groups.map(g => g.id);
