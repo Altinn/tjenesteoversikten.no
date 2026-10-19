@@ -12,7 +12,7 @@ const EnvContext = createContext<EnvContextValue | null>(null);
 export function EnvProvider({ children }: { children: ReactNode }) {
   const [env, setEnvState] = useState<Env>(() => {
     const saved = localStorage.getItem('env');
-    return saved === 'prod' ? 'prod' : 'tt02';
+    return saved === 'tt02' ? 'tt02' : 'prod';
   });
 
   const setEnv = (newEnv: Env) => {
