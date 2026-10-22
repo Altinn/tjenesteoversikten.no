@@ -404,6 +404,27 @@ export interface PolicyStatistics {
   altinn2RoleOnlyWithErRolesCount: number;
   altinn2RoleOnlyWithoutErRolesCount: number;
   altinn2RoleOnlyGroups: PolicyAltinn2RoleOnlyGroup[];
+  mixedTargetPoliciesChecked: number;
+  mixedTargetResourceCount: number;
+  mixedTargetResources: PolicyMixedTargetResource[];
+}
+
+export interface PolicyMixedTargetFinding {
+  targetKind: string;
+  ruleId: string | null;
+  anyOfIndex: number;
+  allOfIndex: number;
+  actions: string[];
+  resourceAttributeIds: string[];
+}
+
+export interface PolicyMixedTargetResource {
+  resourceId: string;
+  title: Record<string, string>;
+  ownerId: string;
+  ownerName: Record<string, string>;
+  resourceType: string;
+  findings: PolicyMixedTargetFinding[];
 }
 
 export interface RoleMapContext { code: string; description?: string | null; kind: 'person' | 'organization' }

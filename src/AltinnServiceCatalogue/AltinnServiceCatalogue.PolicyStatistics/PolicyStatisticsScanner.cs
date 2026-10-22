@@ -59,6 +59,8 @@ public static class PolicyStatisticsScanner
             .Select(static group => group.First())
             .ToArray();
         var outcomes = new ConcurrentBag<ScanOutcome>();
+        var mixedTargetResources = new ConcurrentBag<PolicyMixedTargetResourceDto>();
+        var mixedTargetPoliciesChecked = 0;
         var stopwatch = Stopwatch.StartNew();
 
         await Parallel.ForEachAsync(
@@ -93,6 +95,16 @@ public static class PolicyStatisticsScanner
                     try
                     {
                         var document = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken);
+                        // Inspect raw XML before the ABAC parser: structural findings must survive
+                        // an unrelated parser failure and do not require the failing /rights endpoint.
+                        var mixedTargets = PolicyMixedTargetAnalyzer.Analyze(document);
+                        Interlocked.Increment(ref mixedTargetPoliciesChecked);
+                        if (mixedTargets.Count > 0)
+                        {
+                            mixedTargetResources.Add(new PolicyMixedTargetResourceDto(
+                                resourceId, resource.Title, resource.OwnerId, resource.OwnerName,
+                                resource.ResourceType, mixedTargets));
+                        }
                         using var reader = document.CreateReader();
                         var policy = XacmlParser.ParseXacmlPolicy(reader);
                         var rules = policy.Rules.ToList();
@@ -272,7 +284,12 @@ public static class PolicyStatisticsScanner
             altinn2RoleOnlyResources.Length,
             altinn2RoleOnlyResources.Count(static resource => resource.ErRoleCodes.Count > 0),
             altinn2RoleOnlyResources.Count(static resource => resource.ErRoleCodes.Count == 0),
-            altinn2RoleOnlyGroups);
+            altinn2RoleOnlyGroups,
+            mixedTargetPoliciesChecked,
+            mixedTargetResources.Count,
+            mixedTargetResources.OrderBy(static resource => resource.OwnerId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static resource => resource.ResourceId, StringComparer.OrdinalIgnoreCase)
+                .ToArray());
     }
 
     private static string[] ExtractSubjectValues(XDocument document, string attributeId) =>

@@ -9,6 +9,22 @@ public sealed record PolicyResourceMetadataDto(
 
 public sealed record PolicyAlgorithmUsageDto(string Algorithm, string Kind, int Count);
 
+public sealed record PolicyMixedTargetFindingDto(
+    string TargetKind,
+    string? RuleId,
+    int AnyOfIndex,
+    int AllOfIndex,
+    IReadOnlyList<string> Actions,
+    IReadOnlyList<string> ResourceAttributeIds);
+
+public sealed record PolicyMixedTargetResourceDto(
+    string ResourceId,
+    IReadOnlyDictionary<string, string> Title,
+    string OwnerId,
+    IReadOnlyDictionary<string, string> OwnerName,
+    string ResourceType,
+    IReadOnlyList<PolicyMixedTargetFindingDto> Findings);
+
 public sealed record PolicyAltinn2RoleResourceDto(
     string ResourceId,
     IReadOnlyDictionary<string, string> Title,
@@ -79,4 +95,7 @@ public sealed record PolicyStatisticsDto(
     int Altinn2RoleOnlyResourceCount,
     int Altinn2RoleOnlyWithErRolesCount,
     int Altinn2RoleOnlyWithoutErRolesCount,
-    IReadOnlyList<PolicyAltinn2RoleOnlyGroupDto> Altinn2RoleOnlyGroups);
+    IReadOnlyList<PolicyAltinn2RoleOnlyGroupDto> Altinn2RoleOnlyGroups,
+    int MixedTargetPoliciesChecked,
+    int MixedTargetResourceCount,
+    IReadOnlyList<PolicyMixedTargetResourceDto> MixedTargetResources);
