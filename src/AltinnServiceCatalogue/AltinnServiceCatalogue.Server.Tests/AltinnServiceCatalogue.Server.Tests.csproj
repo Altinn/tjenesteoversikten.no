@@ -8,4 +8,7 @@
     <ProjectReference Include="../AltinnServiceCatalogue.Server/AltinnServiceCatalogue.Server.csproj" />
     <Using Include="Xunit" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="Fixtures/*.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

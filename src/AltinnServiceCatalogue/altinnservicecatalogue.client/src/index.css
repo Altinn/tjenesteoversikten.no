@@ -168,6 +168,11 @@ a { color:var(--t-accent); }
 .role-category-section[data-category="all-a2"] { margin-bottom:32px; border-left-color:#4098e8; }
 .role-category-section[data-category="without-er"] { border-left-color:#d96a6a; }
 .role-category-section[data-category="with-er"] { border-left-color:#37c08b; }
+.mixed-target-section { margin:24px 0 32px; border-left-color:#e07732; overflow-wrap:anywhere; }
+.mixed-target-section .statistics-group-list summary { grid-template-columns:minmax(0,1fr) auto; }
+.mixed-target-section .distribution-card { margin:12px; }
+.mixed-target-section .distribution-card header { flex-wrap:wrap; gap:10px; }
+.mixed-target-section ul { padding-left:20px; list-style:disc; }
 .role-category-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:12px; }
 .role-category-header h4 { margin:0; font-size:17px; }
 .role-category-header p { max-width:820px; margin:6px 0 0; color:var(--t-muted); font-size:13px; line-height:1.5; }
