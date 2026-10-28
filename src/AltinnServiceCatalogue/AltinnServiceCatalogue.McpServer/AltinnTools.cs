@@ -55,7 +55,7 @@ public sealed class AltinnTools
         return ToJson(result);
     }
 
-    [McpServerTool, Description("Scan every resource policy and aggregate XACML RuleCombiningAlgId usage, Deny rules, MustBePresent, conditions, legacy-PDP risk, and fetch/parse coverage. Includes resources with action and resource matches in the same AllOf (legacy template pattern affecting rights/rules extraction), with owner, rule IDs, actions and positions. These structural findings do not confirm HTTP 500.")]
+    [McpServerTool, Description("Scan every resource policy and aggregate XACML RuleCombiningAlgId usage, Deny rules, MustBePresent, conditions, legacy-PDP risk, and fetch/parse coverage. Includes resources with action and resource matches in the same AllOf (legacy template pattern affecting rights/rules extraction), with owner, rule IDs, actions and positions. These structural findings do not confirm HTTP 500. Also counts, per subject attribute key (e.g. urn:altinn:rolecode, urn:altinn:org, urn:altinn:accesspackage) and per key/value pair (e.g. rolecode=dagl, org=skd), how many policies use it (subjectAttributeUsage; keys and values lower-cased).")]
     public static async Task<string> GetPolicyStatistics(
         AltinnApiClient client,
         CancellationToken ct = default,

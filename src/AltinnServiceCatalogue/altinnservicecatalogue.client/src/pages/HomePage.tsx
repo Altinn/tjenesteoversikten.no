@@ -1,6 +1,7 @@
 import CatalogueNavigation from '../components/CatalogueNavigation';
 import PackageResourcesDownload from '../components/PackageResourcesDownload';
 import PolicyMixedTargets from '../components/PolicyMixedTargets';
+import PolicySubjectUsage from '../components/PolicySubjectUsage';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { AreaDto, AreaGroupDto, Org, OrgList, PackageDto, PolicyStatistics as PolicyStatisticsData, ResourceSummary, RoleDto } from '../types';
@@ -384,6 +385,7 @@ function PolicyStatistics({ env, lang, format }: { env: string; lang: string; fo
       </div>
     </article>
     <PolicyMixedTargets statistics={statistics} env={env} lang={lang} format={format} />
+    <PolicySubjectUsage statistics={statistics} env={env} lang={lang} format={format} />
     <section className="role-category-section" data-category="all-a2" aria-labelledby="altinn2-role-usage-title">
       <header className="role-category-header">
         <div><h3 id="altinn2-role-usage-title">{text.roleUsageTitle}</h3><p>{text.roleUsageDescription}</p></div>

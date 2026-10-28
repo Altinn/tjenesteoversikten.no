@@ -18,6 +18,7 @@ function statistics(withFinding: boolean): PolicyStatistics {
       findings: [{ targetKind: 'Rule', ruleId: 'urn:altinn:example:ruleid:3', anyOfIndex: 2,
         allOfIndex: 1, actions: ['delete'], resourceAttributeIds: ['urn:altinn:app', 'urn:altinn:org'] }],
     }] : [],
+    subjectAttributePoliciesChecked: 1, subjectAttributeUsage: [],
   };
 }
 

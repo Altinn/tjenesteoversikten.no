@@ -58,6 +58,13 @@ public sealed record PolicyAltinn2RoleOnlyGroupDto(
     int ResourceCount,
     IReadOnlyList<PolicyAltinn2RoleOnlyResourceDto> Resources);
 
+public sealed record PolicySubjectValueUsageDto(string Value, int PolicyCount);
+
+public sealed record PolicySubjectAttributeUsageDto(
+    string AttributeId,
+    int PolicyCount,
+    IReadOnlyList<PolicySubjectValueUsageDto> Values);
+
 public sealed record PolicyResourceStatisticsDto(
     string ResourceId,
     string Algorithm,
@@ -98,4 +105,6 @@ public sealed record PolicyStatisticsDto(
     IReadOnlyList<PolicyAltinn2RoleOnlyGroupDto> Altinn2RoleOnlyGroups,
     int MixedTargetPoliciesChecked,
     int MixedTargetResourceCount,
-    IReadOnlyList<PolicyMixedTargetResourceDto> MixedTargetResources);
+    IReadOnlyList<PolicyMixedTargetResourceDto> MixedTargetResources,
+    int SubjectAttributePoliciesChecked,
+    IReadOnlyList<PolicySubjectAttributeUsageDto> SubjectAttributeUsage);

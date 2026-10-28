@@ -173,6 +173,15 @@ a { color:var(--t-accent); }
 .mixed-target-section .distribution-card { margin:12px; }
 .mixed-target-section .distribution-card header { flex-wrap:wrap; gap:10px; }
 .mixed-target-section ul { padding-left:20px; list-style:disc; }
+.subject-usage-section { margin:0 0 32px; border-left-color:#7a5ae0; overflow-wrap:anywhere; }
+.subject-usage-section .statistics-group-list summary { grid-template-columns:minmax(0,1fr) auto; }
+.subject-usage-tools { display:flex; flex-wrap:wrap; align-items:flex-start; gap:12px; margin:12px 0 4px; }
+.subject-usage-tools .filter-input { margin-bottom:12px; }
+.subject-usage-tools .secondary-button { height:42px; padding:0 16px; border:1px solid var(--t-line); border-radius:9px; background:transparent; color:var(--t-text); cursor:pointer; }
+.subject-usage-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+.subject-usage-table th,.subject-usage-table td { padding:8px 18px; border-bottom:1px solid var(--t-line2); text-align:left; }
+.subject-usage-table th:last-child,.subject-usage-table td:last-child { width:110px; text-align:right; font-variant-numeric:tabular-nums; }
+.subject-usage-table th { color:var(--t-muted); font-weight:600; }
 .role-category-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:12px; }
 .role-category-header h4 { margin:0; font-size:17px; }
 .role-category-header p { max-width:820px; margin:6px 0 0; color:var(--t-muted); font-size:13px; line-height:1.5; }
