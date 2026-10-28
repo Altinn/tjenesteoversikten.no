@@ -407,6 +407,14 @@ export interface PolicyStatistics {
   mixedTargetPoliciesChecked: number;
   mixedTargetResourceCount: number;
   mixedTargetResources: PolicyMixedTargetResource[];
+  subjectAttributePoliciesChecked: number;
+  subjectAttributeUsage: PolicySubjectAttributeUsage[];
+}
+
+export interface PolicySubjectAttributeUsage {
+  attributeId: string;
+  policyCount: number;
+  values: { value: string; policyCount: number }[];
 }
 
 export interface PolicyMixedTargetFinding {

@@ -60,3 +60,5 @@ Full-stack web app for browsing/searching public digital services (Altinn ecosys
   reports fetch and parse failures separately, and caps the non-default drilldown at 500 resources.
 - Web aggregates are coalesced and cached in `IMemoryCache` for 30 minutes.
 - MCP tool: `get_policy_statistics`; like every MCP tool it defaults to production unless `tt02` is explicit.
+- `subjectAttributeUsage` (`PolicySubjectAttributeAnalyzer`) counts policies per subject-category key and key/value
+  (lower-cased, once per policy); shown on the statistics page with filter and client-side CSV download.

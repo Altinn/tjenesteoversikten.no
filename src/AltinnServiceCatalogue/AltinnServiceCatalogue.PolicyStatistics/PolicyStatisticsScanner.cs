@@ -61,6 +61,7 @@ public static class PolicyStatisticsScanner
         var outcomes = new ConcurrentBag<ScanOutcome>();
         var mixedTargetResources = new ConcurrentBag<PolicyMixedTargetResourceDto>();
         var mixedTargetPoliciesChecked = 0;
+        var subjectAttributes = new ConcurrentBag<IReadOnlyList<(string AttributeId, string Value)>>();
         var stopwatch = Stopwatch.StartNew();
 
         await Parallel.ForEachAsync(
@@ -105,6 +106,7 @@ public static class PolicyStatisticsScanner
                                 resourceId, resource.Title, resource.OwnerId, resource.OwnerName,
                                 resource.ResourceType, mixedTargets));
                         }
+                        subjectAttributes.Add(PolicySubjectAttributeAnalyzer.Extract(document));
                         using var reader = document.CreateReader();
                         var policy = XacmlParser.ParseXacmlPolicy(reader);
                         var rules = policy.Rules.ToList();
@@ -289,7 +291,9 @@ public static class PolicyStatisticsScanner
             mixedTargetResources.Count,
             mixedTargetResources.OrderBy(static resource => resource.OwnerId, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(static resource => resource.ResourceId, StringComparer.OrdinalIgnoreCase)
-                .ToArray());
+                .ToArray(),
+            subjectAttributes.Count,
+            PolicySubjectAttributeAnalyzer.Aggregate(subjectAttributes));
     }
 
     private static string[] ExtractSubjectValues(XDocument document, string attributeId) =>
